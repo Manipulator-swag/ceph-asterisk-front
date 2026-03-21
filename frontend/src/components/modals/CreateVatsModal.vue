@@ -8,7 +8,7 @@
         <div v-if="step1Error" class="error-message">
           <span>{{ step1Error }}</span>
         </div>
-
+        
         <div class="form-group">
           <CustomInput
             v-model="formData.name"

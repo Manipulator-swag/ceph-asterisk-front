@@ -12,7 +12,7 @@ const router = createRouter({
     {
       path: '/details',
       name: 'details',
-      component: () => import('@/views/CDRView.vue'),
+      component: () => import('@/views/CdrView.vue'),
     },
     {
       path: '/logs',
