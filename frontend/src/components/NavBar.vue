@@ -1,11 +1,13 @@
 <template>
   <div class="navbar-wrapper">
     <button class="mobile-menu-toggle" @click="toggleMobileMenu" aria-label="Открыть меню">
-      <div class="hamburger" :class="{ active: isMobileMenuOpen }">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
+      <svg v-if="!isMobileMenuOpen" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+
+      <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
     </button>
 
     <div v-if="isMobileMenuOpen" class="mobile-overlay" @click="toggleMobileMenu"></div>
@@ -37,6 +39,17 @@
       <div class="navbar-footer">
         <div class="navbar-admin">
           <span class="navbar-admin__label">Администратор</span>
+          <button class="theme-toggle" @click="themeStore.toggleTheme()" aria-label="Переключить тему">
+            <!-- Солнце (светлая тема) -->
+            <svg v-if="themeStore.currentTheme === 'light'" class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M12 1V3M12 21V23M23 12H21M3 12H1M19.07 4.93L17.66 6.34M6.34 17.66L4.93 19.07M19.07 19.07L17.66 17.66M6.34 6.34L4.93 4.93" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <!-- Луна (тёмная тема) -->
+            <svg v-else class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
       </div>
     </nav>
@@ -46,6 +59,9 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useThemeStore } from '@/stores/theme'
+
+const themeStore = useThemeStore()
 
 interface MenuItem {
   id: string
@@ -64,6 +80,7 @@ const menuItems: MenuItem[] = [
   { id: 'cdr', main: 'Детализация', sub: '(CDR)', route: '/details' },
   { id: 'logs', main: 'Логи', sub: '', route: '/logs' },
   { id: 'audio', main: 'Аудиофайлы', sub: '', route: '/audio' },
+  { id: 'constructor', main: 'Конструктор', sub: '', route: '/constructor' },
 ]
 
 // Проверка размера экрана
@@ -112,55 +129,26 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
-/* Стили для кнопки гамбургера - ПЕРЕМЕЩЕНА ВПРАВО */
 .mobile-menu-toggle {
   display: none;
   position: fixed;
   top: 15px;
-  right: 15px; /* Изменено с left на right */
+  right: 15px;
   z-index: 1100;
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 10px;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  color: var(--color-text);
   transition: all 0.3s ease;
-  opacity: 0.7;
 }
 
 .mobile-menu-toggle:hover {
   background: var(--color-background-mute);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: scale(1.05);
 }
 
-.hamburger {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 24px;
-}
-
-.hamburger span {
-  display: block;
-  height: 2px;
-  background: var(--color-text);
-  transition: 0.3s;
-}
-
-.hamburger.active span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 5px);
-}
-
-.hamburger.active span:nth-child(2) {
-  opacity: 0;
-}
-
-.hamburger.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(4px, -4px);
-}
-
-/* Затемнение фона на мобильных */
 .mobile-overlay {
   position: fixed;
   top: 0;
@@ -203,7 +191,7 @@ onBeforeUnmount(() => {
 
 .navbar-header {
   display: flex;
-  border-bottom: 1px solid var(--vt-c-indigo);
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   background-color: var(--color-background-soft);
@@ -261,12 +249,12 @@ onBeforeUnmount(() => {
 }
 
 .navbar-item:hover {
-  background-color: var(--vt-c-indigo);
+  background-color: var(--color-surface-hover);
 }
 
 .navbar-item--active {
-  background-color: #3498db;
-  border-left-color: #2980b9;
+  background-color: var(--color-primary);
+  border-left-color: var(--color-primary-dark);
 }
 
 .navbar-item__main {
@@ -282,7 +270,7 @@ onBeforeUnmount(() => {
 
 .navbar-footer {
   padding: 20px;
-  border-top: 1px solid var(--vt-c-indigo);
+  border-top: 1px solid var(--color-border);
   position: sticky;
   bottom: 0;
   background-color: var(--color-background-soft);
@@ -292,8 +280,9 @@ onBeforeUnmount(() => {
 
 .navbar-admin {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
 }
 
 .navbar-admin__label {
@@ -322,6 +311,38 @@ onBeforeUnmount(() => {
   background: #a8a8a8;
 }
 
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  transform: scale(1.05);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+.theme-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.5;
+  transition: stroke var(--transition-fast);
+}
+
 /* ===== АДАПТИВНОСТЬ ===== */
 
 /* Планшеты и небольшие ноутбуки */
@@ -344,7 +365,15 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .mobile-menu-toggle {
     display: block;
-    right: 15px; /* Подтверждаем правую позицию */
+    right: 15px;
+  }
+
+  .theme-icon {
+    width: 18px;
+    height: 18px;
+  }
+  .theme-toggle {
+    padding: 4px;
   }
 
   .navbar {

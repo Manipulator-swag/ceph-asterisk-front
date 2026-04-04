@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
+import { useThemeStore } from './stores/theme'
+import { onMounted, onBeforeUnmount } from 'vue'
+
+const themeStore = useThemeStore()
+
+onMounted(() => {
+  themeStore.initializeTheme()
+})
+
+onBeforeUnmount(() => {
+  themeStore.stopWatchingSystemTheme()
+})
 </script>
 
 <template>
