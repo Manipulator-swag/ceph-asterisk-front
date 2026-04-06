@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
+import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 import { onMounted, onBeforeUnmount } from 'vue'
 
 const themeStore = useThemeStore()
+const authStore = useAuthStore()
 
-onMounted(() => {
+onMounted(async () => {
+  await authStore.checkAuth()
   themeStore.initializeTheme()
 })
 
@@ -17,8 +20,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="app-layout">
-    <NavBar class="navigation" />
-    <main class="main-content">
+    <NavBar v-if="$route.path !== '/login'" class="navigation" />
+    <main class="main-content" :class="{ 'full-width': $route.path === '/login' }">
       <RouterView />
     </main>
   </div>

@@ -67,11 +67,7 @@ interface Emits {
   (e: 'delete', id: string): void
 }
 
-const { numbers, loading, deletingNumberId } = withDefaults(defineProps<Props>(), {
-  numbers: () => [],
-  loading: false,
-  deletingNumberId: null
-})
+const { numbers = [], loading = false, deletingNumberId = null } = defineProps<Props>()
 
 const emit = defineEmits<Emits>()
 
