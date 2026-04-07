@@ -186,6 +186,15 @@
                       :disabled="creatingNumber"
                     />
                   </div>
+                  <div>
+                    <label for="new-sip-transport" class="label">SIP-транспорт</label>
+                    <CustomSelect
+                      id="new-sip-transport"
+                      v-model="newNumber.sipTransport"
+                      :options="sipTransportOptions"
+                      :disabled="creatingNumber"
+                    />
+                  </div>
                 </div>
                 <div class="flex justify-end gap-2">
                   <CustomButton variant="outline" @click="cancelAddNumber" :disabled="creatingNumber">
@@ -267,6 +276,7 @@ import type {
   SIPUserFromAPI,
   VatsInstanceFromAPI
 } from '@/types/vats'
+import type { TransportType } from '@/types/vats'
 
 interface Props {
   show: boolean
@@ -281,6 +291,12 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const toast = useToastStore()
+
+const sipTransportOptions = [
+  { value: 'udp', label: 'UDP' },
+  { value: 'tcp', label: 'TCP' },
+  { value: 'tls', label: 'TLS' },
+]
 
 // Состояния
 const currentTab = ref('general')
@@ -335,12 +351,13 @@ const numberTransportOptions = [
 ]
 
 // Новый номер
-const newNumber = reactive<Partial<InternalNumber>>({
+const newNumber = reactive<Partial<InternalNumber> & { sipTransport: TransportType }>({
   number: '',
   password: '',
   callerId: '',
   externalNumber: '',
   transportType: 'local',
+  sipTransport: 'udp', 
 })
 
 const tabs = [
@@ -397,6 +414,7 @@ const resetNewNumber = () => {
   newNumber.callerId = ''
   newNumber.externalNumber = ''
   newNumber.transportType = 'local'
+  newNumber.sipTransport = 'udp'
 }
 
 const cancelAddNumber = () => {
@@ -425,6 +443,7 @@ const addNumber = async () => {
       account_code: newNumber.externalNumber || '',
       context: 'internal',
       instance_name: props.vatsData.name,
+      transport: newNumber.sipTransport,
     }
     const createdUser = await vatsApi.createVatsUser(instanceId, createData)
     const internalNumber: InternalNumber = {
@@ -432,7 +451,7 @@ const addNumber = async () => {
       number: createdUser.username,
       callerId: createdUser.caller_id,
       externalNumber: createdUser.account_code || undefined,
-      transportType: 'local',
+      transportType: newNumber.transportType === 'external' ? 'external' : 'local',
     }
     formData.internalNumbers.push(internalNumber)
     resetNewNumber()

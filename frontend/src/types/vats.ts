@@ -1,3 +1,5 @@
+export type TransportType = 'udp' | 'tcp' | 'tls'
+
 export interface VatsFormData {
   name: string
   sipPort: string
@@ -21,6 +23,7 @@ export interface SIPUserCreateRequest {
   account_code?: string
   context?: string
   instance_name: string
+  transport?: TransportType
 }
 
 export interface VatsTableItem {
@@ -66,8 +69,6 @@ export interface SIPUserFromAPI {
   context?: string
   instance_name: string
 }
-
-export type TransportType = 'udp' | 'tcp' | 'tls'
 
 export interface VatsCreateRequest {
   name: string
