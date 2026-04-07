@@ -39,17 +39,24 @@
       <div class="navbar-footer">
         <div class="navbar-admin">
           <span class="navbar-admin__label">Администратор</span>
-          <button class="theme-toggle" @click="themeStore.toggleTheme()" aria-label="Переключить тему">
-            <!-- Солнце (светлая тема) -->
-            <svg v-if="themeStore.currentTheme === 'light'" class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M12 1V3M12 21V23M23 12H21M3 12H1M19.07 4.93L17.66 6.34M6.34 17.66L4.93 19.07M19.07 19.07L17.66 17.66M6.34 6.34L4.93 4.93" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-            <!-- Луна (тёмная тема) -->
-            <svg v-else class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+          <div class="admin-actions">
+            <button class="theme-toggle" @click="themeStore.toggleTheme()" aria-label="Переключить тему">
+              <svg v-if="themeStore.currentTheme === 'light'" class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M12 1V3M12 21V23M23 12H21M3 12H1M19.07 4.93L17.66 6.34M6.34 17.66L4.93 19.07M19.07 19.07L17.66 17.66M6.34 6.34L4.93 4.93" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <svg v-else class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button class="logout-button" @click="handleLogout" aria-label="Выйти">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 12H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </nav>
@@ -60,8 +67,7 @@
 import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useThemeStore } from '@/stores/theme'
-
-const themeStore = useThemeStore()
+import { useAuthStore } from '@/stores/auth'
 
 interface MenuItem {
   id: string
@@ -74,6 +80,8 @@ const router = useRouter()
 const route = useRoute()
 const isMobileMenuOpen = ref(false)
 const isMobileView = ref(false)
+const authStore = useAuthStore()
+const themeStore = useThemeStore()
 
 const menuItems: MenuItem[] = [
   { id: 'vats', main: 'BATC', sub: '', route: '/' },
@@ -110,6 +118,11 @@ const navigateTo = (routePath: string): void => {
     isMobileMenuOpen.value = false
     document.body.style.overflow = ''
   }
+}
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
 }
 
 // Слушатель изменения размера окна
@@ -285,6 +298,12 @@ onBeforeUnmount(() => {
   gap: var(--spacing-sm);
 }
 
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .navbar-admin__label {
   font-size: 0.9rem;
   font-weight: 500;
@@ -311,7 +330,8 @@ onBeforeUnmount(() => {
   background: #a8a8a8;
 }
 
-.theme-toggle {
+.theme-toggle,
+.logout-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,15 +345,18 @@ onBeforeUnmount(() => {
   line-height: 1;
 }
 
-.theme-toggle:hover {
+.theme-toggle:hover,
+.logout-button:hover {
   background: var(--color-surface-hover);
   color: var(--color-text);
   transform: scale(1.05);
 }
 
-.theme-toggle:active {
+.theme-toggle:active,
+.logout-button:active {
   transform: scale(0.95);
 }
+
 
 .theme-icon {
   display: block;
@@ -372,8 +395,14 @@ onBeforeUnmount(() => {
     width: 18px;
     height: 18px;
   }
-  .theme-toggle {
+
+  .theme-toggle,
+  .logout-button {
     padding: 4px;
+  }
+
+  .admin-actions {
+    gap: 4px;
   }
 
   .navbar {

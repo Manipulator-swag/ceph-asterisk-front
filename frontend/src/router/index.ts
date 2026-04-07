@@ -44,24 +44,23 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, from) => {
   const authStore = useAuthStore()
   
   if (to.meta.requiresAuth) {
     if (!authStore.isAuthenticated) {
       const isAuthed = await authStore.checkAuth()
       if (!isAuthed) {
-        next('/login')
-        return
+        return '/login'
       }
     }
-    next()
+    return true
   } 
   else if (to.path === '/login' && authStore.isAuthenticated) {
-    next('/')
+    return '/'
   }
   else {
-    next()
+    return true
   }
 })
 
