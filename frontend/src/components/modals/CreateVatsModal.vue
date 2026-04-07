@@ -227,7 +227,7 @@ const formData: LocalFormData = reactive({
   rtp_port_start: 10000,
   rtp_port_end: 20000,
   transport_type: 'udp',   // 👈 теперь строго 'udp'|'tcp'|'tls'
-  create_test_users: true,
+  create_test_users: false,
 })
 
 const currentStep = ref(1)
@@ -292,7 +292,7 @@ watch(() => props.show, async (newVal) => {
     formData.rtp_port_start = 10000
     formData.rtp_port_end = 20000
     formData.transport_type = 'udp'
-    formData.create_test_users = true
+    formData.create_test_users = false
     isLoading.value = false
     step1Error.value = ''
     step2Error.value = ''

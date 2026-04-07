@@ -91,7 +91,7 @@ const handleVATSCreated = (newVats: VatsInstanceFromAPI) => {
   const newItem: VatsTableItem = {
     id: newVats.id.toString(),
     name: newVats.name,
-    status: newVats.status === 'running' ? 'Активна' : 'Отключена',
+    status: 'Активна',
     server: `asterisk-${newVats.name}`,
     port: newVats.sip_port,
     date: formatDate(new Date()),
