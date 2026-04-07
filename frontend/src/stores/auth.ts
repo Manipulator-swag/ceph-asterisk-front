@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import axiosInstance from '@/api/axiosConfig'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true' || false
+type LoginMethod = 'standard' | 'ldap'
 
 interface User {
   id: number
@@ -59,11 +60,33 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated.value = false
   }
 
+  const mockLdapLogin = async (login: string, password: string, remember: boolean) => {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    // Для демонстрации: принимаем те же admin/admin
+    if (login === 'admin' && password === 'admin') {
+      const mockUser = { id: 1, login: 'admin', name: 'LDAP User', role: 'admin' }
+      const mockAccessToken = 'mock_ldap_access_token'
+      const mockRefreshToken = 'mock_ldap_refresh_token'
+      if (remember) {
+        localStorage.setItem('access_token', mockAccessToken)
+        localStorage.setItem('refresh_token', mockRefreshToken)
+      } else {
+        sessionStorage.setItem('access_token', mockAccessToken)
+        sessionStorage.setItem('refresh_token', mockRefreshToken)
+      }
+      user.value = mockUser
+      isAuthenticated.value = true
+      return true
+    }
+    throw new Error('Invalid LDAP credentials')
+  }
+
   // Реальные функции (если не мок)
-  const realLogin = async (login: string, password: string, remember: boolean) => {
+  const realLogin = async (login: string, password: string, remember: boolean, method: LoginMethod = 'standard') => {
     isLoading.value = true
     try {
-      const response = await axiosInstance.post('/auth/login', { login, password })
+      const endpoint = method === 'ldap' ? '/auth/login/ldap' : '/auth/login'
+      const response = await axiosInstance.post(endpoint, { login, password })
       const { access_token, refresh_token } = response.data
       if (remember) {
         localStorage.setItem('access_token', access_token)
@@ -118,7 +141,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Выбираем реализацию на основе флага
-  const login = USE_MOCK ? mockLogin : realLogin
+  const login = async (login: string, password: string, remember: boolean, method: LoginMethod = 'standard') => {
+    if (USE_MOCK) {
+      if (method === 'ldap') {
+        return mockLdapLogin(login, password, remember)
+      } else {
+        return mockLogin(login, password, remember)
+      }
+    } else {
+      return realLogin(login, password, remember, method)
+    }
+  }
   const checkAuth = USE_MOCK ? mockCheckAuth : realCheckAuth
   const logout = USE_MOCK ? mockLogout : realLogout
 

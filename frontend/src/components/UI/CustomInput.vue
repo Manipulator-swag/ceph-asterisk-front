@@ -23,20 +23,67 @@
         </slot>
       </div>
       <input
-        :type="type"
+        :type="currentType"
         :placeholder="placeholder"
         :value="stringValue"
         @input="handleInput"
         class="input-field"
-        :class="{ 'with-icon': withIcon }"
+        :class="{ 'with-icon': withIcon, 'with-toggle': showToggle }"
         :disabled="disabled"
       />
+      <button
+        v-if="showToggle"
+        type="button"
+        class="password-toggle"
+        @click="toggleVisibility"
+        :aria-label="isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль'"
+      >
+        <svg
+          v-if="isPasswordVisible"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" />
+        </svg>
+        <svg
+          v-else
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M2 2L22 22M6.712 6.712C4.132 8.188 2 12 2 12C2 12 6 20 12 20C14.1 20 16.2 18.8 17.6 17M9.5 9.5C8.5 10.5 8 11.8 8 13C8 15.2 9.8 17 12 17C13.2 17 14.5 16.5 15.5 15.5"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M15 9C15 7.3 13.7 6 12 6C11.2 6 10.5 6.3 10 6.8"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 interface Props {
   modelValue: string | number | undefined
@@ -83,12 +130,75 @@ const handleInput = (event: Event) => {
     emit('update:modelValue', value)
   }
 }
+
+// Логика показа/скрытия пароля
+const isPasswordVisible = ref(false)
+const showToggle = computed(() => props.type === 'password')
+const currentType = computed(() => {
+  if (props.type !== 'password') return props.type
+  return isPasswordVisible.value ? 'text' : 'password'
+})
+
+const toggleVisibility = () => {
+  isPasswordVisible.value = !isPasswordVisible.value
+}
 </script>
 
 <style scoped>
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: all var(--transition-fast);
+  overflow: hidden;
+}
+
+.input-field {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: var(--spacing-sm);
+  font-size: 1rem;
+  color: var(--color-text);
+  background: transparent;
+}
+
+.input-field.with-icon {
+  padding-left: 0;
+}
+
+.input-field.with-toggle {
+  padding-right: 2rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.password-toggle:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
 .input-container {
   margin-bottom: var(--spacing-md);
-  width: 80%;
+  width: 100%;
 }
 
 .input-label {

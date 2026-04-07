@@ -129,7 +129,7 @@ onUnmounted(() => {
 <style scoped>
 .select-container {
   margin-bottom: var(--spacing-md);
-  width: 80%;
+  width: 100%;
   position: relative;
 }
 
