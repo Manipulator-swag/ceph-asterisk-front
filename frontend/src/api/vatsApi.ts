@@ -2,32 +2,17 @@ import axiosInstance from './axiosConfig'
 import type { AxiosRequestConfig } from 'axios'
 
 import type {
-  VatsFormData,
-  VatsUpdateData,
   SIPUserCreateRequest,
   VatsInstanceFromAPI,
   SIPUserFromAPI,
-  VatsCreateRequest
+  VatsCreateRequest,
+  AsteriskInstanceUpdate,
 } from '@/types/vats'
 import { API_CONFIG } from '@/config/api'
 
 export const vatsApi = {
   async getVatsList(): Promise<VatsInstanceFromAPI[]> {
     const response = await axiosInstance.get<VatsInstanceFromAPI[]>(API_CONFIG.ENDPOINTS.INSTANCES)
-    return response.data
-  },
-
-  async updateVats(id: string, updateData: VatsUpdateData): Promise<VatsInstanceFromAPI> {
-    const data = {
-      name: updateData.name,
-      sip_port: updateData.port,
-      http_port: updateData.port + 1000,
-      status: updateData.status === 'Активна' ? 'running' : 'stopped',
-    }
-    const response = await axiosInstance.put<VatsInstanceFromAPI>(
-      `${API_CONFIG.ENDPOINTS.INSTANCES}${id}`,
-      data
-    )
     return response.data
   },
 
@@ -54,6 +39,32 @@ export const vatsApi = {
     await axiosInstance.delete(
       `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/users/${userId}`
     )
+  },
+
+  async getInstanceDetails(instanceId: number): Promise<VatsInstanceFromAPI> {
+    const response = await axiosInstance.get<VatsInstanceFromAPI>(
+      `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}`
+    )
+    return response.data
+  },
+
+  async updateVats(id: string, updateData: AsteriskInstanceUpdate): Promise<VatsInstanceFromAPI> {
+    const response = await axiosInstance.put<VatsInstanceFromAPI>(
+      `${API_CONFIG.ENDPOINTS.INSTANCES}${id}`,
+      updateData
+    )
+    return response.data
+  },
+
+  async sendCommand(instanceName: string, command: string): Promise<unknown> {
+    const response = await axiosInstance.post(
+      `${API_CONFIG.ENDPOINTS.INSTANCES}send_comand/${instanceName}?comand=${encodeURIComponent(command)}`
+    )
+    return response.data
+  },
+
+  async reloadInstance(instanceId: number): Promise<void> {
+    await axiosInstance.post(`${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/reload`)
   },
 
   async createVatsFull(

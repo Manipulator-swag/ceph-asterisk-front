@@ -76,3 +76,10 @@ export interface VatsCreateRequest {
   rtp_port_end: number
   create_test_users?: boolean
 }
+
+export interface AsteriskInstanceUpdate {
+  name?: string | null
+  sip_port?: number | null
+  http_port?: number | null
+  status?: string | null   // 'running' | 'stopped' | null
+}

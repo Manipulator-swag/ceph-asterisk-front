@@ -6,21 +6,21 @@
         <div class="flex items-center gap-4 mb-6">
           <CustomButton variant="outline" @click="closeModal"> Назад </CustomButton>
           <div class="flex-1">
-            <h1 class="modal-title">{{ vatsData?.name }}</h1>
+            <h1 class="modal-title">{{ instanceDetails?.name || vatsData?.name }}</h1>
             <div class="flex items-center gap-3">
-              <CustomBadge :variant="vatsData?.status === 'Активна' ? 'default' : 'secondary'">
-                {{ vatsData?.status }}
+              <CustomBadge :variant="formData.status === 'Активна' ? 'default' : 'secondary'">
+                {{ formData.status }}
               </CustomBadge>
-              <span class="text-gray-600">Сервер: {{ vatsData?.server }}</span>
-              <span class="text-gray-600">Порт: {{ vatsData?.port }}</span>
+              <span class="text-gray-600">SIP порт: {{ formData.sip_port }}</span>
+              <span class="text-gray-600">HTTP порт: {{ formData.http_port }}</span>
             </div>
           </div>
           <div class="flex gap-2">
-            <CustomButton variant="outline" @click="handleReload" :disabled="isLoading">
+            <CustomButton variant="outline" @click="handleReload" :disabled="isSaving">
               Перечитать конфиг
             </CustomButton>
-            <CustomButton @click="handleSave" :disabled="isLoading">
-              <span v-if="isLoading" class="button-loading">
+            <CustomButton @click="handleSave" :disabled="isSaving">
+              <span v-if="isSaving" class="button-loading">
                 <span class="spinner"></span>
                 Сохранение...
               </span>
@@ -34,7 +34,6 @@
       <CustomTabs v-model="currentTab" :tabs="tabs">
         <template #general>
           <div class="tab-content">
-            <!-- Основные настройки -->
             <div class="card">
               <div class="grid grid-cols-2 gap-6">
                 <div>
@@ -44,31 +43,73 @@
                     v-model="formData.name"
                     placeholder="Введите название"
                     :with-icon="false"
+                    :disabled="isSaving"
                   />
                 </div>
 
                 <div>
-                  <label for="port" class="label">SIP-порт *</label>
-                  <CustomInput id="port" type="number" v-model="portString" :with-icon="false" />
-                </div>
-
-                <div>
-                  <label for="transport" class="label">Тип транспорта</label>
-                  <CustomSelect
-                    id="transport"
-                    v-model="formData.transportType"
-                    :options="transportOptions"
+                  <label for="sip_port" class="label">SIP-порт *</label>
+                  <CustomInput
+                    id="sip_port"
+                    type="number"
+                    v-model="formData.sip_port"
+                    :with-icon="false"
+                    :disabled="isSaving"
                   />
                 </div>
 
                 <div>
-                  <label for="server" class="label">Сервер</label>
-                  <CustomSelect id="server" v-model="formData.server" :options="serverOptions" />
+                  <label for="http_port" class="label">HTTP-порт</label>
+                  <CustomInput
+                    id="http_port"
+                    type="number"
+                    v-model="formData.http_port"
+                    :with-icon="false"
+                    :disabled="isSaving"
+                  />
+                </div>
+
+                <div>
+                  <label for="ami_port" class="label">AMI-порт (только чтение)</label>
+                  <CustomInput
+                    id="ami_port"
+                    type="number"
+                    v-model="formData.ami_port"
+                    :with-icon="false"
+                    disabled
+                  />
+                </div>
+
+                <div>
+                  <label for="rtp_start" class="label">RTP начало (только чтение)</label>
+                  <CustomInput
+                    id="rtp_start"
+                    type="number"
+                    v-model="formData.rtp_port_start"
+                    :with-icon="false"
+                    disabled
+                  />
+                </div>
+
+                <div>
+                  <label for="rtp_end" class="label">RTP конец (только чтение)</label>
+                  <CustomInput
+                    id="rtp_end"
+                    type="number"
+                    v-model="formData.rtp_port_end"
+                    :with-icon="false"
+                    disabled
+                  />
                 </div>
 
                 <div>
                   <label for="status" class="label">Статус</label>
-                  <CustomSelect id="status" v-model="formData.status" :options="statusOptions" />
+                  <CustomSelect
+                    id="status"
+                    v-model="formData.status"
+                    :options="statusOptions"
+                    :disabled="isSaving"
+                  />
                 </div>
               </div>
             </div>
@@ -77,19 +118,14 @@
 
         <template #numbers>
           <div class="tab-content">
-            <!-- Внутренние номера -->
             <div class="card">
               <div class="flex justify-between items-center mb-4">
                 <h3 class="numbers-page-header">Внутренние номера</h3>
-                <CustomButton
-                  @click="showAddNumber = !showAddNumber"
-                  :disabled="isLoading || loadingNumbers"
-                >
+                <CustomButton @click="showAddNumber = true" :disabled="isSaving || loadingNumbers">
                   Добавить номер
                 </CustomButton>
               </div>
 
-              <!-- Сообщение об ошибке -->
               <div v-if="numbersError" class="error-message mb-4">
                 <div class="error-content">
                   <span class="error-icon">⚠</span>
@@ -98,7 +134,6 @@
                 <button @click="numbersError = ''" class="error-close">×</button>
               </div>
 
-              <!-- Форма добавления номера -->
               <div v-if="showAddNumber" class="card bg-gray-50 mb-4">
                 <div class="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -153,11 +188,7 @@
                   </div>
                 </div>
                 <div class="flex justify-end gap-2">
-                  <CustomButton
-                    variant="outline"
-                    @click="cancelAddNumber"
-                    :disabled="creatingNumber"
-                  >
+                  <CustomButton variant="outline" @click="cancelAddNumber" :disabled="creatingNumber">
                     Отмена
                   </CustomButton>
                   <CustomButton @click="addNumber" :disabled="creatingNumber">
@@ -170,7 +201,6 @@
                 </div>
               </div>
 
-              <!-- Компонент таблицы -->
               <InternalNumbersTable
                 :numbers="formData.internalNumbers"
                 :loading="loadingNumbers"
@@ -180,65 +210,120 @@
             </div>
           </div>
         </template>
+
+        <template #commands>
+          <div class="tab-content">
+            <div class="card">
+              <h3 class="mb-4">Выполнить команду Asterisk</h3>
+              <div class="mb-4">
+                <label for="command" class="label">Команда (например, `sip show peers`)</label>
+                <textarea
+                  id="command"
+                  v-model="commandText"
+                  class="command-textarea"
+                  rows="4"
+                  placeholder="Введите команду Asterisk CLI"
+                  :disabled="isSendingCommand"
+                ></textarea>
+              </div>
+              <div class="flex justify-end">
+                <CustomButton @click="sendCommand" :disabled="isSendingCommand || !commandText.trim()">
+                  <span v-if="isSendingCommand" class="button-loading">
+                    <span class="spinner"></span>
+                    Отправка...
+                  </span>
+                  <span v-else>Отправить</span>
+                </CustomButton>
+              </div>
+              <div v-if="commandResult" class="command-result mt-4">
+                <div class="command-result__header">Результат:</div>
+                <pre class="command-result__output">{{ commandResult }}</pre>
+              </div>
+              <div v-if="commandError" class="error-message mt-4">
+                {{ commandError }}
+              </div>
+            </div>
+          </div>
+        </template>
       </CustomTabs>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomSelect from '@/components/UI/CustomSelect.vue'
 import CustomButton from '@/components/UI/CustomButton.vue'
 import CustomTabs from '@/components/UI/CustomTabs.vue'
 import CustomBadge from '@/components/UI/CustomBadge.vue'
 import InternalNumbersTable from '@/components/tables/InternalNumbersTable.vue'
+import { vatsApi } from '@/api/vatsApi'
+import { useToastStore } from '@/stores/toast'
 import type {
   VatsTableItem,
-  VatsUpdateData,
   InternalNumber,
   SIPUserCreateRequest,
-  SIPUserFromAPI
+  SIPUserFromAPI,
+  VatsInstanceFromAPI
 } from '@/types/vats'
-import { vatsApi } from '@/api/vatsApi'
 
 interface Props {
   show: boolean
   vatsData: VatsTableItem | null
-  isLoading?: boolean
 }
 
 interface Emits {
   (e: 'close'): void
-  (e: 'updated', vatsData: VatsUpdateData): void
+  (e: 'updated'): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+const toast = useToastStore()
 
+// Состояния
 const currentTab = ref('general')
-const showAddNumber = ref(false)
+const isSaving = ref(false)
 const loadingNumbers = ref(false)
 const creatingNumber = ref(false)
 const deletingNumberId = ref<string | null>(null)
 const numbersError = ref('')
+const showAddNumber = ref(false)
 
-const tabs = [
-  { value: 'general', label: 'Основные' },
-  { value: 'numbers', label: 'Внутренние номера' },
-]
+// Данные инстанса (полные)
+const instanceDetails = ref<VatsInstanceFromAPI | null>(null)
 
-const transportOptions = [
-  { value: 'UDP', label: 'UDP' },
-  { value: 'TCP', label: 'TCP' },
-  { value: 'TLS', label: 'TLS' },
-]
+// Форма редактирования (расширенная)
+interface ExtendedVatsForm {
+  name: string
+  sip_port: number
+  http_port: number
+  ami_port: number
+  rtp_port_start: number
+  rtp_port_end: number
+  status: 'Активна' | 'Отключена'
+  internalNumbers: InternalNumber[]
+}
 
-const serverOptions = [
-  { value: 'asterisk-01', label: 'asterisk-01' },
-  { value: 'asterisk-02', label: 'asterisk-02' },
-]
+const formData = reactive<ExtendedVatsForm>({
+  name: '',
+  sip_port: 5060,
+  http_port: 8088,
+  ami_port: 5038,
+  rtp_port_start: 10000,
+  rtp_port_end: 20000,
+  status: 'Активна',
+  internalNumbers: [],
+})
 
+// Команды
+const commandText = ref('')
+const isSendingCommand = ref(false)
+const commandResult = ref('')
+const commandError = ref('')
+
+// Опции для селектов
 const statusOptions = [
   { value: 'Активна', label: 'Активна' },
   { value: 'Отключена', label: 'Отключена' },
@@ -249,6 +334,7 @@ const numberTransportOptions = [
   { value: 'external', label: 'Внешний' },
 ]
 
+// Новый номер
 const newNumber = reactive<Partial<InternalNumber>>({
   number: '',
   password: '',
@@ -257,107 +343,54 @@ const newNumber = reactive<Partial<InternalNumber>>({
   transportType: 'local',
 })
 
-const formData = reactive<VatsUpdateData>({
-  id: '',
-  name: '',
-  status: 'Активна',
-  server: '',
-  port: 5060,
-  transportType: 'UDP',
-  internalNumbers: [],
-})
+const tabs = [
+  { value: 'general', label: 'Основные' },
+  { value: 'numbers', label: 'Внутренние номера' },
+  { value: 'commands', label: 'Команды' },
+]
 
-const portString = computed({
-  get: () => formData.port?.toString() || '',
-  set: (value: string) => {
-    const numValue = Number(value)
-    formData.port = isNaN(numValue) ? 0 : numValue
+// Загрузка полных данных инстанса
+const loadInstanceDetails = async () => {
+  if (!props.vatsData?.id) return
+  try {
+    const details = await vatsApi.getInstanceDetails(Number(props.vatsData.id))
+    instanceDetails.value = details
+    formData.name = details.name
+    formData.sip_port = details.sip_port
+    formData.http_port = details.http_port ?? 8088
+    formData.ami_port = details.ami_port ?? 5038
+    formData.rtp_port_start = details.rtp_port_start ?? 10000
+    formData.rtp_port_end = details.rtp_port_end ?? 20000
+    formData.status = details.status === 'running' ? 'Активна' : 'Отключена'
+  } catch (error) {
+    console.error(error)
+    toast.addToast({ message: 'Ошибка загрузки данных ВАТС', type: 'error' })
   }
-})
+}
 
+// Загрузка внутренних номеров
 const loadInternalNumbers = async () => {
-  if (!props.vatsData) return
-
+  if (!props.vatsData?.id) return
   loadingNumbers.value = true
   numbersError.value = ''
-
   try {
-    const instanceId = Number(props.vatsData.id)
-    const users = await vatsApi.getVatsUsers(instanceId)
-
+    const users = await vatsApi.getVatsUsers(Number(props.vatsData.id))
     formData.internalNumbers = users.map((user: SIPUserFromAPI) => ({
       id: user.id.toString(),
       number: user.username,
       callerId: user.caller_id,
       externalNumber: user.account_code || undefined,
-      transportType: 'local',
+      transportType: 'local' as const,
     }))
-  } catch (error: unknown) {
-    console.error('Ошибка при загрузке внутренних номеров:', error)
-
-    if (error instanceof Error) {
-      numbersError.value = error.message || 'Не удалось загрузить внутренние номера'
-    } else {
-      numbersError.value = 'Не удалось загрузить внутренние номера'
-    }
+  } catch (error) {
+    console.error(error)
+    numbersError.value = 'Не удалось загрузить внутренние номера'
   } finally {
     loadingNumbers.value = false
   }
 }
 
-watch(
-  () => props.show,
-  (newVal) => {
-    if (newVal && props.vatsData) {
-      Object.assign(formData, {
-        id: props.vatsData.id,
-        name: props.vatsData.name,
-        status: props.vatsData.status,
-        server: props.vatsData.server,
-        port: props.vatsData.port,
-        transportType: props.vatsData.transportType,
-        internalNumbers: props.vatsData.internalNumbers || [],
-      })
-
-      loadInternalNumbers()
-    }
-  },
-)
-
-const closeModal = () => {
-  emit('close')
-}
-
-const handleOverlayClick = () => {
-  if (!props.isLoading) {
-    closeModal()
-  }
-}
-
-const handleReload = () => {
-  console.log('Reload config')
-}
-
-const handleSave = () => {
-  if (!formData.name.trim()) {
-    alert('Введите название ВАТС')
-    return
-  }
-
-  if (!formData.port || formData.port <= 0) {
-    alert('Введите корректный SIP-порт')
-    return
-  }
-
-  emit('updated', { ...formData })
-}
-
-const cancelAddNumber = () => {
-  showAddNumber.value = false
-  resetNewNumber()
-  numbersError.value = ''
-}
-
+// Сброс формы нового номера
 const resetNewNumber = () => {
   newNumber.number = ''
   newNumber.password = ''
@@ -366,12 +399,18 @@ const resetNewNumber = () => {
   newNumber.transportType = 'local'
 }
 
+const cancelAddNumber = () => {
+  showAddNumber.value = false
+  resetNewNumber()
+  numbersError.value = ''
+}
+
+// Добавление номера
 const addNumber = async () => {
   if (!newNumber.number || !newNumber.password || !newNumber.callerId) {
-    alert('Заполните все обязательные поля')
+    toast.addToast({ message: 'Заполните все обязательные поля', type: 'warning' })
     return
   }
-
   if (!props.vatsData) return
 
   creatingNumber.value = true
@@ -381,15 +420,13 @@ const addNumber = async () => {
     const instanceId = Number(props.vatsData.id)
     const createData: SIPUserCreateRequest = {
       username: newNumber.number,
-      password: newNumber.password!,
+      password: newNumber.password,
       caller_id: newNumber.callerId,
       account_code: newNumber.externalNumber || '',
       context: 'internal',
       instance_name: props.vatsData.name,
     }
-
     const createdUser = await vatsApi.createVatsUser(instanceId, createData)
-
     const internalNumber: InternalNumber = {
       id: createdUser.id.toString(),
       number: createdUser.username,
@@ -397,29 +434,22 @@ const addNumber = async () => {
       externalNumber: createdUser.account_code || undefined,
       transportType: 'local',
     }
-
     formData.internalNumbers.push(internalNumber)
     resetNewNumber()
     showAddNumber.value = false
-  } catch (error: unknown) {
-    console.error('Ошибка при создании внутреннего номера:', error)
-
-    if (error instanceof Error) {
-      numbersError.value = error.message || 'Не удалось создать внутренний номер'
-    } else {
-      numbersError.value = 'Не удалось создать внутренний номер'
-    }
+    toast.addToast({ message: 'Номер успешно добавлен', type: 'success' })
+  } catch (error) {
+    console.error(error)
+    numbersError.value = error instanceof Error ? error.message : 'Не удалось создать внутренний номер'
   } finally {
     creatingNumber.value = false
   }
 }
 
+// Удаление номера
 const deleteNumber = async (id: string) => {
   if (!props.vatsData) return
-
-  if (!confirm('Вы уверены, что хотите удалить этот внутренний номер?')) {
-    return
-  }
+  if (!confirm('Вы уверены, что хотите удалить этот внутренний номер?')) return
 
   deletingNumberId.value = id
   numbersError.value = ''
@@ -427,81 +457,104 @@ const deleteNumber = async (id: string) => {
   try {
     const instanceId = Number(props.vatsData.id)
     await vatsApi.deleteVatsUser(instanceId, id)
-
     formData.internalNumbers = formData.internalNumbers.filter((n) => n.id !== id)
-  } catch (error: unknown) {
-    console.error('Ошибка при удалении внутреннего номера:', error)
-
-    if (error instanceof Error) {
-      numbersError.value = error.message || 'Не удалось удалить внутренний номер'
-    } else {
-      numbersError.value = 'Не удалось удалить внутренний номер'
-    }
+    toast.addToast({ message: 'Номер удалён', type: 'success' })
+  } catch (error) {
+    console.error(error)
+    numbersError.value = error instanceof Error ? error.message : 'Не удалось удалить внутренний номер'
   } finally {
     deletingNumberId.value = null
+  }
+}
+
+// Открытие модалки
+watch(
+  () => props.show,
+  async (newVal) => {
+    if (newVal && props.vatsData) {
+      await loadInstanceDetails()
+      await loadInternalNumbers()
+    }
+  },
+  { immediate: true }
+)
+
+const closeModal = () => {
+  emit('close')
+}
+
+const handleOverlayClick = () => {
+  if (!isSaving.value) closeModal()
+}
+
+const handleReload = async () => {
+  if (!props.vatsData?.id) return
+  try {
+    await vatsApi.reloadInstance(Number(props.vatsData.id))
+    toast.addToast({ message: 'Конфигурация перезагружена', type: 'success' })
+  } catch {
+    toast.addToast({ message: 'Ошибка перезагрузки', type: 'error' })
+  }
+}
+
+const handleSave = async () => {
+  if (!formData.name.trim()) {
+    toast.addToast({ message: 'Введите название ВАТС', type: 'warning' })
+    return
+  }
+  if (!formData.sip_port || formData.sip_port < 1 || formData.sip_port > 65535) {
+    toast.addToast({ message: 'Введите корректный SIP-порт (1-65535)', type: 'warning' })
+    return
+  }
+
+  isSaving.value = true
+  try {
+    await vatsApi.updateVats(props.vatsData!.id, {
+      name: formData.name,
+      sip_port: formData.sip_port,
+      http_port: formData.http_port,
+      status: formData.status === 'Активна' ? 'running' : 'stopped',
+    })
+    toast.addToast({ message: 'Изменения сохранены', type: 'success' })
+    emit('updated')
+    closeModal()
+  } catch (error) {
+    console.error(error)
+    toast.addToast({ message: 'Ошибка сохранения', type: 'error' })
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const sendCommand = async () => {
+  if (!commandText.value.trim()) return
+  if (!props.vatsData?.name) {
+    toast.addToast({ message: 'Неизвестное имя ВАТС', type: 'error' })
+    return
+  }
+  isSendingCommand.value = true
+  commandResult.value = ''
+  commandError.value = ''
+  try {
+    const response = await vatsApi.sendCommand(props.vatsData.name, commandText.value)
+    commandResult.value = typeof response === 'string' ? response : JSON.stringify(response, null, 2)
+  } catch (error: unknown) {
+    let message = 'Ошибка выполнения команды'
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as { response?: { data?: { detail?: string } } }
+      message = err.response?.data?.detail || message
+    } else if (error instanceof Error) {
+      message = error.message
+    }
+    commandError.value = message
+  } finally {
+    isSendingCommand.value = false
   }
 }
 </script>
 
 <style scoped>
-/* Стили остаются теми же, кроме стилей для таблицы */
-.error-message {
-  background-color: var(--color-error-light);
-  border: 1px solid var(--color-error-border);
-  color: var(--color-error);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-md);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-}
-
-.error-content {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.error-icon {
-  font-size: 1.2rem;
-}
-
-.error-close {
-  background: transparent;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: var(--color-error);
-  padding: 0 var(--spacing-xs);
-  line-height: 1;
-}
-
-.error-close:hover {
-  opacity: 0.8;
-}
-
-.button-loading {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.spinner {
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
+/* Стили (те же, что и в предыдущей версии, плюс новые) */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -517,12 +570,8 @@ const deleteNumber = async (id: string) => {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal-content.large {
@@ -539,14 +588,8 @@ const deleteNumber = async (id: string) => {
 }
 
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
@@ -561,102 +604,111 @@ const deleteNumber = async (id: string) => {
 }
 
 /* Утилитарные классы */
-.flex {
-  display: flex;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.justify-end {
-  justify-content: flex-end;
-}
-
-.flex-1 {
-  flex: 1;
-}
-
-.gap-2 {
-  gap: var(--spacing-sm);
-}
-
-.gap-3 {
-  gap: var(--spacing-md);
-}
-
-.gap-4 {
-  gap: var(--spacing-lg);
-}
-
-.gap-6 {
-  gap: 1.5rem;
-}
-
-.mb-4 {
-  margin-bottom: var(--spacing-md);
-}
-
-.mb-6 {
-  margin-bottom: var(--spacing-lg);
-}
-
-.text-gray-600 {
-  color: var(--color-text-secondary);
-}
-
-.text-gray-500 {
-  color: var(--color-text-muted);
-}
-
-.text-center {
-  text-align: center;
-}
-
-.text-right {
-  text-align: right;
-}
-
-.py-8 {
-  padding-top: var(--spacing-xl);
-  padding-bottom: var(--spacing-xl);
-}
-
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
+.flex-1 { flex: 1; }
+.gap-2 { gap: var(--spacing-sm); }
+.gap-3 { gap: var(--spacing-md); }
+.gap-4 { gap: var(--spacing-lg); }
+.gap-6 { gap: 1.5rem; }
+.mb-4 { margin-bottom: var(--spacing-md); }
+.mb-6 { margin-bottom: var(--spacing-lg); }
+.mt-4 { margin-top: var(--spacing-md); }
+.text-gray-600 { color: var(--color-text-secondary); }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.py-8 { padding-top: var(--spacing-xl); padding-bottom: var(--spacing-xl); }
 .tab-content {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
 }
-
-.bg-gray-50 {
-  background-color: var(--color-background-soft);
-}
-
+.bg-gray-50 { background-color: var(--color-background-soft); }
 .label {
   display: block;
   margin-bottom: var(--spacing-sm);
   font-weight: 500;
   color: var(--color-heading);
 }
+.numbers-page-header { color: var(--color-heading); }
+.grid { display: grid; }
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-.numbers-page-header {
+/* Ошибки */
+.error-message {
+  background-color: var(--color-error-light);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.error-content { display: flex; align-items: center; gap: var(--spacing-xs); }
+.error-icon { font-size: 1.2rem; }
+.error-close {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--color-error);
+  padding: 0 var(--spacing-xs);
+  line-height: 1;
+}
+.error-close:hover { opacity: 0.8; }
+
+/* Кнопки и спиннер */
+.button-loading { display: flex; align-items: center; gap: var(--spacing-xs); }
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Команды */
+.command-textarea {
+  width: 100%;
+  padding: 10px;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: monospace;
+  resize: vertical;
+}
+.command-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.command-result {
+  background: var(--color-background-mute);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+}
+.command-result__header {
+  font-weight: bold;
+  margin-bottom: 8px;
   color: var(--color-heading);
 }
-
-.grid {
-  display: grid;
+.command-result__output {
+  font-family: monospace;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  max-height: 300px;
+  overflow-y: auto;
 }
 
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-/* Адаптивность для больших модальных окон */
+/* Адаптивность */
 @media (max-width: 768px) {
   .modal-content.large {
     padding: var(--spacing-md);
@@ -664,32 +716,15 @@ const deleteNumber = async (id: string) => {
     width: calc(100% - 2 * var(--spacing-md));
     max-width: none;
   }
-
   .grid-cols-2 {
     grid-template-columns: 1fr;
   }
-
-  .py-8 {
-    padding-top: var(--spacing-lg);
-    padding-bottom: var(--spacing-lg);
-  }
 }
-
-/* Для очень маленьких экранов */
 @media (max-width: 480px) {
-  .flex {
-    align-items: center;
-    flex-direction: column;
-  }
-
   .modal-content.large {
     padding: var(--spacing-sm);
     margin: var(--spacing-sm);
     width: calc(100% - 2 * var(--spacing-sm));
-  }
-
-  .card {
-    padding: var(--spacing-md);
   }
 }
 </style>
