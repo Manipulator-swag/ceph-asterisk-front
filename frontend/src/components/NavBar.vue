@@ -40,7 +40,9 @@
 
       <div class="navbar-footer">
         <div class="navbar-admin">
-          <span class="navbar-admin__label">Администратор</span>
+          <span class="navbar-admin__label">
+            {{ authStore.user?.name || authStore.user?.login || 'Администратор' }}
+          </span>
           <div class="admin-actions">
             <button class="theme-toggle" @click="themeStore.toggleTheme()" aria-label="Переключить тему">
               <svg v-if="themeStore.currentTheme === 'light'" class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
