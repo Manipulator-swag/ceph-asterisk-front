@@ -81,9 +81,13 @@ const handleLogin = async () => {
   try {
     await authStore.login(form.login, form.password, remember.value)
     router.push('/')
-  } catch (err: any) {
-    errorMessage.value = err.message || 'Ошибка входа. Проверьте логин и пароль.'
+  } catch (err: unknown) {
+  if (err instanceof Error) {
+    errorMessage.value = err.message
+  } else {
+    errorMessage.value = 'Ошибка входа'
   }
+}
 }
 </script>
 
