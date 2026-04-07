@@ -5,8 +5,11 @@ import VatsTable from '@/components/tables/VatsTable.vue'
 import PageHeader from '@/components/UI/PageHeader.vue'
 import CreateVatsModal from '@/components/modals/CreateVatsModal.vue'
 import VatsDetailsModal from '@/components/modals/VatsDetailsModal.vue'
-import type { VatsFormData, VatsTableItem, VatsUpdateData, VatsInstanceFromAPI } from '@/types/vats'
+import type { VatsTableItem, VatsInstanceFromAPI, } from '@/types/vats'
 import { vatsApi } from '@/api/vatsApi'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const showCreateModal = ref(false)
 const showDetailsModal = ref(false)
@@ -70,64 +73,34 @@ const fetchVatsList = async () => {
   }
 }
 
-const handleVATSUpdated = async (updatedData: VatsUpdateData) => {
+const handleVATSUpdated = async () => {
   isLoading.value = true
   errorMessage.value = ''
-
   try {
-    console.log('Обновление ВАТС:', updatedData)
-
-    const updatedInstance = await vatsApi.updateVats(updatedData.id, updatedData)
-    console.log('Обновленная ВАТС:', updatedInstance)
-
+    await fetchVatsList()   // перезагружаем весь список
     closeDetailsModal()
-  } catch (error: unknown) {
-    console.error('Полная ошибка при обновлении ВАТС:', error)
-
-    if (error instanceof Error) {
-      errorMessage.value = error.message
-    } else {
-      errorMessage.value = 'Не удалось обновить ВАТС'
-    }
+  } catch {
+    errorMessage.value = 'Не удалось обновить данные ВАТС'
   } finally {
     isLoading.value = false
   }
 }
 
 // Функция для создания ВАТС
-const handleVATSCreated = async (vatsData: VatsFormData) => {
-  isLoading.value = true
-  errorMessage.value = ''
-
-  try {
-    const newInstance = await vatsApi.createVats(vatsData)
-    console.log('Созданная ВАТС:', newInstance)
-
-    // Добавляем новую ВАТС в список
-    const newVats: VatsTableItem = {
-      id: newInstance.id.toString(),
-      name: newInstance.name,
-      status: newInstance.status === 'running' ? 'Активна' : 'Отключена',
-      server: `asterisk-${newInstance.name}`,
-      port: newInstance.sip_port,
-      date: formatDate(new Date()),
-      transportType: vatsData.transportType,
-      internalNumbers: [],
-    }
-
-    serversData.value.push(newVats)
-    closeCreateModal()
-  } catch (error: unknown) {
-    console.error('Полная ошибка при создании ВАТС:', error)
-
-    if (error instanceof Error) {
-      errorMessage.value = error.message
-    } else {
-      errorMessage.value = 'Не удалось создать ВАТС'
-    }
-  } finally {
-    isLoading.value = false
+const handleVATSCreated = (newVats: VatsInstanceFromAPI) => {
+  const newItem: VatsTableItem = {
+    id: newVats.id.toString(),
+    name: newVats.name,
+    status: newVats.status === 'running' ? 'Активна' : 'Отключена',
+    server: `asterisk-${newVats.name}`,
+    port: newVats.sip_port,
+    date: formatDate(new Date()),
+    transportType: 'udp',
+    internalNumbers: [],
   }
+  serversData.value.unshift(newItem)
+  closeCreateModal()
+  toast.addToast({ message: `ВАТС "${newVats.name}" создана`, type: 'success' })
 }
 
 // Функция для удаления ВАТС

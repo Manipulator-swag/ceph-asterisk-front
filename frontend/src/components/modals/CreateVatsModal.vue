@@ -244,7 +244,7 @@ const saveDraft = () => {
     ami_port: formData.ami_port,
     rtp_port_start: formData.rtp_port_start,
     rtp_port_end: formData.rtp_port_end,
-    transport_type: formData.transport_type,   // ✅ добавлено
+    transport_type: formData.transport_type,
     create_test_users: formData.create_test_users,
     currentStep: currentStep.value,
   }
