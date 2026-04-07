@@ -4,6 +4,7 @@ import NavBar from '@/components/NavBar.vue'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 import { onMounted, onBeforeUnmount } from 'vue'
+import Toast from '@/components/UI/AppToast.vue'
 
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
@@ -24,6 +25,7 @@ onBeforeUnmount(() => {
     <main class="main-content" :class="{ 'full-width': $route.path === '/login' }">
       <RouterView />
     </main>
+    <Toast />
   </div>
 </template>
 

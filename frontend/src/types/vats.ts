@@ -51,6 +51,9 @@ export interface VatsInstanceFromAPI {
   status: string
   sip_port: number
   http_port?: number
+  ami_port?: number
+  rtp_port_start?: number
+  rtp_port_end?: number
   create_test_users?: boolean
 }
 
@@ -62,4 +65,14 @@ export interface SIPUserFromAPI {
   account_code?: string
   context?: string
   instance_name: string
+}
+
+export interface VatsCreateRequest {
+  name: string
+  sip_port: number
+  http_port: number
+  ami_port: number
+  rtp_port_start: number
+  rtp_port_end: number
+  create_test_users?: boolean
 }

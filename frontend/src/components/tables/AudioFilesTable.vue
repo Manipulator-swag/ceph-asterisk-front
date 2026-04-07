@@ -47,7 +47,9 @@
 
     <!-- Сообщение если таблица пустая -->
     <div v-if="audioFiles.length === 0" class="empty-state">
-      <div class="empty-icon">🎵</div>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M12 3V15M12 15C10.8954 15 10 15.8954 10 17C10 18.1046 10.8954 19 12 19C13.1046 19 14 18.1046 14 17V6L18 5.5V8L12 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
       <h3>Нет загруженных аудиофайлов</h3>
       <p>Загрузите первый аудиофайл, нажав кнопку "Загрузить файл"</p>
     </div>

@@ -1,16 +1,25 @@
 <template>
-  <div v-if="show" class="modal-overlay" @click="handleOverlayClick">
+  <div v-if="show" class="modal-overlay">
     <div class="modal-content" @click.stop>
+      <!-- Шаг 1: наименование -->
       <div v-if="currentStep === 1" class="modal-step">
         <h2 class="modal-title">Создание новой ВАТС</h2>
-        <p class="modal-subtitle">Шаг 1: Введите наименование ВАТС</p>
+        <p class="modal-subtitle">Шаг 1: Основная информация</p>
+
+        <!-- Баннер черновика только на первом шаге -->
+        <div v-if="showDraftRestore" class="draft-banner">
+          <span>Найден сохранённый черновик</span>
+          <CustomButton size="small" @click="restoreDraft">Восстановить</CustomButton>
+          <CustomButton size="small" variant="outline" @click="clearDraft">Очистить</CustomButton>
+        </div>
 
         <div v-if="step1Error" class="error-message">
           <span>{{ step1Error }}</span>
         </div>
-        
+
         <div class="form-group">
           <CustomInput
+            ref="nameInputRef"
             v-model="formData.name"
             label="Наименование ВАТС *"
             placeholder="Например: Головной офис"
@@ -21,13 +30,15 @@
           <p class="field-hint">Обязательное поле. Минимум 3 символа</p>
         </div>
 
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="formData.create_test_users" />
+            <span>Создать тестовых пользователей (6001, 6002)</span>
+          </label>
+        </div>
+
         <div class="modal-actions">
-          <CustomButton
-            variant="outline"
-            @click="closeModal"
-            :disabled="isLoading"
-            class="cancel-btn"
-          >
+          <CustomButton variant="outline" @click="closeModal" :disabled="isLoading" class="cancel-btn">
             Отмена
           </CustomButton>
           <CustomButton @click="validateAndNextStep" :disabled="isLoading" class="next-btn">
@@ -39,13 +50,11 @@
           </CustomButton>
         </div>
       </div>
+
+      <!-- Шаг 2: порты -->
       <div v-if="currentStep === 2" class="modal-step">
         <h2 class="modal-title">Создание новой ВАТС</h2>
-        <p class="modal-subtitle">Шаг 2: Базовая настройка</p>
-
-        <div class="success-message">
-          <span>ВАТС "{{ formData.name }}" успешно инициализирована</span>
-        </div>
+        <p class="modal-subtitle">Шаг 2: Настройка портов</p>
 
         <div v-if="step2Error" class="error-message">
           <span>{{ step2Error }}</span>
@@ -53,18 +62,53 @@
 
         <div class="form-group">
           <CustomInput
-            v-model="formData.sipPort"
-            label="SIP-порт для внутренней связи *"
+            v-model="formData.sip_port"
+            label="SIP-порт *"
             type="number"
             :with-icon="false"
             :disabled="isLoading"
             @input="clearStep2Error"
           />
+        </div>
 
+        <div class="form-group">
           <CustomInput
-            v-model="formData.server"
-            label="Имя сервера *"
-            type="text"
+            v-model="formData.http_port"
+            label="HTTP-порт *"
+            type="number"
+            :with-icon="false"
+            :disabled="isLoading"
+            @input="clearStep2Error"
+          />
+        </div>
+
+        <div class="form-group">
+          <CustomInput
+            v-model="formData.ami_port"
+            label="AMI-порт *"
+            type="number"
+            :with-icon="false"
+            :disabled="isLoading"
+            @input="clearStep2Error"
+          />
+        </div>
+
+        <div class="form-group">
+          <CustomInput
+            v-model="formData.rtp_port_start"
+            label="RTP порт (начало) *"
+            type="number"
+            :with-icon="false"
+            :disabled="isLoading"
+            @input="clearStep2Error"
+          />
+        </div>
+
+        <div class="form-group">
+          <CustomInput
+            v-model="formData.rtp_port_end"
+            label="RTP порт (конец) *"
+            type="number"
             :with-icon="false"
             :disabled="isLoading"
             @input="clearStep2Error"
@@ -75,67 +119,36 @@
           <CustomButton variant="outline" @click="prevStep" :disabled="isLoading" class="back-btn">
             Назад
           </CustomButton>
-          <CustomButton
-            variant="outline"
-            @click="closeModal"
-            :disabled="isLoading"
-            class="cancel-btn"
-          >
+          <CustomButton variant="outline" @click="closeModal" :disabled="isLoading" class="cancel-btn">
             Отмена
           </CustomButton>
-          <CustomButton @click="confirmAndFinish" :disabled="isLoading" class="finish-btn">
+          <CustomButton @click="createVats" :disabled="isLoading" class="finish-btn">
             <span v-if="isLoading" class="button-loading">
               <span class="spinner"></span>
               Создание...
             </span>
-            <span v-else>Завершить создание</span>
+            <span v-else>Создать ВАТС</span>
           </CustomButton>
         </div>
       </div>
 
-      <!-- Шаг 3: Подтверждение -->
+      <!-- Шаг 3: успех -->
       <div v-if="currentStep === 3" class="modal-step confirmation-step">
-        <h2 class="modal-title">Подтверждение создания</h2>
-
+        <h2 class="modal-title">ВАТС успешно создана!</h2>
         <div class="confirmation-message success-message">
           <div class="confirmation-content">
-            <h3 class="confirmation-title">ВАТС успешно создана!</h3>
-            <p class="confirmation-details">
-              Система создала новую виртуальную АТС со следующими параметрами:
-            </p>
-
+            <p>ВАТС "{{ formData.name }}" создана с параметрами:</p>
             <div class="vats-details">
-              <div class="detail-item">
-                <span class="detail-label">Название:</span>
-                <span class="detail-value">{{ formData.name }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">SIP-порт:</span>
-                <span class="detail-value">{{ formData.sipPort }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">Сервер:</span>
-                <span class="detail-value">{{ formData.server }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">Тип транспорта:</span>
-                <span class="detail-value">{{ formData.transportType }}</span>
-              </div>
+              <div class="detail-item"><span class="detail-label">SIP порт:</span> {{ formData.sip_port }}</div>
+              <div class="detail-item"><span class="detail-label">HTTP порт:</span> {{ formData.http_port }}</div>
+              <div class="detail-item"><span class="detail-label">AMI порт:</span> {{ formData.ami_port }}</div>
+              <div class="detail-item"><span class="detail-label">RTP диапазон:</span> {{ formData.rtp_port_start }} - {{ formData.rtp_port_end }}</div>
+              <div class="detail-item"><span class="detail-label">Тестовые пользователи:</span> {{ formData.create_test_users ? 'Да' : 'Нет' }}</div>
             </div>
-
-            <p class="confirmation-note">
-              Вы можете начать настройку внутренних номеров и правил маршрутизации.
-            </p>
           </div>
         </div>
-
         <div class="modal-actions">
-          <CustomButton @click="closeWithSuccess" class="finish-btn">
-            Перейти к настройке
-          </CustomButton>
-          <CustomButton variant="outline" @click="closeModal" class="cancel-btn">
-            Закрыть
-          </CustomButton>
+          <CustomButton @click="closeWithSuccess" class="finish-btn">Закрыть</CustomButton>
         </div>
       </div>
     </div>
@@ -143,140 +156,195 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, nextTick } from 'vue'
+import axios from 'axios'
 import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomButton from '@/components/UI/CustomButton.vue'
-import type { VatsFormData } from '@/types/vats'
+import { vatsApi } from '@/api/vatsApi'
+import { useToastStore } from '@/stores/toast'
+import type { VatsInstanceFromAPI } from '@/types/vats'
 
 interface Props {
   show: boolean
 }
-
 interface Emits {
   (e: 'close'): void
-  (e: 'created', vatsData: VatsFormData): void
+  (e: 'created', vatsData: VatsInstanceFromAPI): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+const toast = useToastStore()
 
-// Состояние модального окна
+// Refs
+const nameInputRef = ref<InstanceType<typeof CustomInput> | null>(null)
+let abortController: AbortController | null = null
+let saveTimeout: ReturnType<typeof setTimeout> | null = null
+
+// Черновик
+const DRAFT_KEY = 'vats_create_draft'
+const showDraftRestore = ref(false)
+
+// Форма
+const formData = reactive({
+  name: '',
+  sip_port: 5060,
+  http_port: 8088,
+  ami_port: 5038,
+  rtp_port_start: 10000,
+  rtp_port_end: 20000,
+  create_test_users: true,
+})
+
 const currentStep = ref(1)
 const isLoading = ref(false)
 const step1Error = ref('')
 const step2Error = ref('')
 
-// Данные формы
-const formData = reactive<VatsFormData>({
-  name: '',
-  sipPort: '5060',
-  server: 'asterisk-01',
-  transportType: 'UDP',
-})
+// Сохранение черновика (с debounce)
+const saveDraft = () => {
+  const draft = {
+    name: formData.name,
+    sip_port: formData.sip_port,
+    http_port: formData.http_port,
+    ami_port: formData.ami_port,
+    rtp_port_start: formData.rtp_port_start,
+    rtp_port_end: formData.rtp_port_end,
+    create_test_users: formData.create_test_users,
+    currentStep: currentStep.value,
+  }
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+}
 
-// Сброс формы при открытии/закрытии модального окна
-watch(
-  () => props.show,
-  (newVal) => {
-    if (newVal) {
-      resetForm()
+// Восстановление черновика
+const restoreDraft = () => {
+  const raw = localStorage.getItem(DRAFT_KEY)
+  if (raw) {
+    try {
+      const draft = JSON.parse(raw)
+      Object.assign(formData, draft)
+      currentStep.value = draft.currentStep || 1
+      showDraftRestore.value = false
+      toast.addToast({ message: 'Черновик восстановлен', type: 'info' })
+    } catch (e) {
+      console.error('Ошибка восстановления черновика', e)
     }
-  },
-)
-
-const handleOverlayClick = (event: MouseEvent) => {
-  if ((event.target as HTMLElement).classList.contains('modal-overlay')) {
-    closeModal()
   }
 }
 
-const resetForm = () => {
-  currentStep.value = 1
-  formData.name = ''
-  formData.sipPort = '5060'
-  formData.server = 'asterisk-01'
-  formData.transportType = 'UDP'
-  isLoading.value = false
-  step1Error.value = ''
-  step2Error.value = ''
+// Очистка черновика
+const clearDraft = () => {
+  localStorage.removeItem(DRAFT_KEY)
+  showDraftRestore.value = false
+  toast.addToast({ message: 'Черновик удалён', type: 'info' })
 }
 
+// Единый обработчик открытия модалки
+watch(() => props.show, async (newVal) => {
+  if (newVal) {
+    // Сброс формы
+    currentStep.value = 1
+    formData.name = ''
+    formData.sip_port = 5060
+    formData.http_port = 8088
+    formData.ami_port = 5038
+    formData.rtp_port_start = 10000
+    formData.rtp_port_end = 20000
+    formData.create_test_users = true
+    isLoading.value = false
+    step1Error.value = ''
+    step2Error.value = ''
+
+    // Проверка черновика
+    const draftExists = !!localStorage.getItem(DRAFT_KEY)
+    showDraftRestore.value = draftExists
+
+    // Автофокус
+    await nextTick()
+    const inputEl = nameInputRef.value?.$el?.querySelector('input')
+    inputEl?.focus()
+  }
+})
+
+// Автосохранение черновика при изменении (debounce 500 мс)
+watch(
+  () => ({ ...formData, step: currentStep.value }),
+  () => {
+    if (saveTimeout) clearTimeout(saveTimeout)
+    saveTimeout = setTimeout(() => {
+      if (props.show && formData.name) {
+        saveDraft()
+      }
+    }, 500)
+  },
+  { deep: true }
+)
+
+// Очистка таймера при размонтировании (опционально)
+// onBeforeUnmount(() => { if (saveTimeout) clearTimeout(saveTimeout) })
+
+// Вспомогательные функции
 const closeModal = () => {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+  }
   emit('close')
 }
 
-const clearStep1Error = () => {
-  step1Error.value = ''
-}
+const clearStep1Error = () => { step1Error.value = '' }
+const clearStep2Error = () => { step2Error.value = '' }
 
-const clearStep2Error = () => {
-  step2Error.value = ''
-}
-
+// Валидация имени
 const validateStep1 = (): boolean => {
-  if (!formData.name.trim()) {
-    step1Error.value = 'Поле обязательно для заполнения'
-    return false
-  }
-
-  if (formData.name.trim().length < 3) {
-    step1Error.value = 'Название должно содержать минимум 3 символа'
-    return false
-  }
-
-  if (!/^[a-zA-Zа-яА-Я0-9\s\-_]+$/.test(formData.name)) {
-    step1Error.value = 'Название содержит недопустимые символы'
-    return false
-  }
-
+  const name = formData.name.trim()
+  if (!name) { step1Error.value = 'Поле обязательно'; return false }
+  if (name.length < 3) { step1Error.value = 'Минимум 3 символа'; return false }
+  if (!/^[a-zA-Zа-яА-Я0-9\s\-_]+$/.test(name)) { step1Error.value = 'Недопустимые символы'; return false }
   return true
 }
 
+// Валидация портов
 const validateStep2 = (): boolean => {
-  const port = parseInt(formData.sipPort)
-  if (isNaN(port) || port < 1024 || port > 65535) {
-    step2Error.value = 'SIP-порт должен быть числом от 1024 до 65535'
+  const ports = [
+    { name: 'SIP-порт', val: formData.sip_port },
+    { name: 'HTTP-порт', val: formData.http_port },
+    { name: 'AMI-порт', val: formData.ami_port },
+    { name: 'RTP начало', val: formData.rtp_port_start },
+    { name: 'RTP конец', val: formData.rtp_port_end },
+  ]
+  for (const p of ports) {
+    if (isNaN(p.val) || p.val < 1 || p.val > 65535) {
+      step2Error.value = `${p.name} должен быть числом от 1 до 65535`
+      return false
+    }
+  }
+  if (formData.rtp_port_start >= formData.rtp_port_end) {
+    step2Error.value = 'RTP порт начала должен быть меньше порта конца'
     return false
   }
-
-  if (!formData.server.trim()) {
-    step2Error.value = 'Поле "Имя сервера" обязательно для заполнения'
-    return false
-  }
-
-  if (!formData.server.startsWith('asterisk-')) {
-    step2Error.value = 'Имя сервера должно начинаться с "asterisk-"'
-    return false
-  }
-
-  if (!/^asterisk-[a-zA-Z0-9\-_]+$/.test(formData.server)) {
-    step2Error.value = 'Имя сервера содержит недопустимые символы'
-    return false
-  }
-
   return true
+}
+
+// Проверка уникальности имени (через GET /instances/)
+const isNameUnique = async (name: string): Promise<boolean> => {
+  try {
+    const list = await vatsApi.getVatsList()
+    const exists = list.some(item => item.name === name)
+    if (exists) step1Error.value = 'ВАТС с таким именем уже существует'
+    return !exists
+  } catch {
+    step1Error.value = 'Не удалось проверить уникальность имени'
+    return false
+  }
 }
 
 const validateAndNextStep = async () => {
   if (!validateStep1()) return
-
   isLoading.value = true
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 800))
-
-    const existingNames = ['Головной офис', 'Филиал 1', 'Тестовая ВАТС']
-    if (existingNames.includes(formData.name.trim())) {
-      step1Error.value = 'ВАТС с таким именем уже существует'
-      return
-    }
-
-    currentStep.value = 2
-  } catch (error) {
-    console.error('Ошибка при проверке имени:', error)
-    step1Error.value = 'Ошибка при проверке доступности имени'
-  } finally {
-    isLoading.value = false
-  }
+  const unique = await isNameUnique(formData.name.trim())
+  isLoading.value = false
+  if (unique) currentStep.value = 2
 }
 
 const prevStep = () => {
@@ -284,28 +352,65 @@ const prevStep = () => {
   step2Error.value = ''
 }
 
-const confirmAndFinish = async () => {
+// Создание ВАТС
+const createVats = async () => {
   if (!validateStep2()) return
 
-  if (!confirm(`Вы уверены, что хотите создать ВАТС "${formData.name}"?`)) {
-    return
+  // Отменяем предыдущий запрос
+  if (abortController) {
+    abortController.abort()
   }
+  abortController = new AbortController()
 
   isLoading.value = true
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+  step2Error.value = ''
 
+  try {
+    const result = await vatsApi.createVatsFull(
+      {
+        name: formData.name.trim(),
+        sip_port: formData.sip_port,
+        http_port: formData.http_port,
+        ami_port: formData.ami_port,
+        rtp_port_start: formData.rtp_port_start,
+        rtp_port_end: formData.rtp_port_end,
+        create_test_users: formData.create_test_users,
+      },
+      formData.create_test_users,
+      { signal: abortController.signal }
+    )
+
+    // Успех
+    toast.addToast({ message: `ВАТС "${formData.name}" успешно создана!`, type: 'success' })
+    localStorage.removeItem(DRAFT_KEY)   // удаляем черновик
+    showDraftRestore.value = false
     currentStep.value = 3
-  } catch (error) {
-    console.error('Ошибка при создании ВАТС:', error)
-    step2Error.value = 'Ошибка при создании ВАТС. Попробуйте еще раз.'
+    emit('created', result)
+  } catch (err: unknown) {
+    // Если запрос был отменён – ничего не показываем
+    if (axios.isCancel(err)) {
+      return
+    }
+    let msg = 'Ошибка создания ВАТС'
+    if (err && typeof err === 'object') {
+      if ('response' in err && err.response && typeof err.response === 'object') {
+        const response = err.response as { data?: { detail?: string } }
+        if (response.data?.detail) {
+          msg = response.data.detail
+        }
+      } else if (err instanceof Error) {
+        msg = err.message
+      }
+    }
+    step2Error.value = msg
+    toast.addToast({ message: `Ошибка: ${msg}`, type: 'error' })
   } finally {
     isLoading.value = false
+    abortController = null
   }
 }
 
 const closeWithSuccess = () => {
-  emit('created', { ...formData })
   closeModal()
 }
 </script>
@@ -463,6 +568,18 @@ const closeWithSuccess = () => {
 :deep(.input-field:disabled),
 :deep(.select-trigger:disabled) {
   cursor: not-allowed;
+}
+
+.draft-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-info-light);
+  border: 1px solid var(--color-info-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
 }
 
 /* Адаптивность */

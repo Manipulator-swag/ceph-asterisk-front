@@ -1,30 +1,19 @@
 import axiosInstance from './axiosConfig'
+import type { AxiosRequestConfig } from 'axios'
+
 import type {
   VatsFormData,
   VatsUpdateData,
   SIPUserCreateRequest,
   VatsInstanceFromAPI,
-  SIPUserFromAPI
+  SIPUserFromAPI,
+  VatsCreateRequest
 } from '@/types/vats'
 import { API_CONFIG } from '@/config/api'
 
 export const vatsApi = {
   async getVatsList(): Promise<VatsInstanceFromAPI[]> {
     const response = await axiosInstance.get<VatsInstanceFromAPI[]>(API_CONFIG.ENDPOINTS.INSTANCES)
-    return response.data
-  },
-
-  async createVats(vatsData: VatsFormData): Promise<VatsInstanceFromAPI> {
-    const createData = {
-      name: vatsData.name,
-      sip_port: parseInt(vatsData.sipPort),
-      http_port: parseInt(vatsData.sipPort) + 1000,
-      create_test_users: true,
-    }
-    const response = await axiosInstance.post<VatsInstanceFromAPI>(
-      API_CONFIG.ENDPOINTS.INSTANCES,
-      createData
-    )
     return response.data
   },
 
@@ -65,5 +54,25 @@ export const vatsApi = {
     await axiosInstance.delete(
       `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/users/${userId}`
     )
+  },
+
+  async createVatsFull(
+    data: VatsCreateRequest,
+    createTestUsers: boolean = false,
+    config?: AxiosRequestConfig
+  ): Promise<VatsInstanceFromAPI> {
+    const response = await axiosInstance.post<VatsInstanceFromAPI>(
+      `${API_CONFIG.ENDPOINTS.INSTANCES}?create_test_users=${createTestUsers}`,
+      {
+        name: data.name,
+        sip_port: data.sip_port,
+        http_port: data.http_port,
+        ami_port: data.ami_port,
+        rtp_port_start: data.rtp_port_start,
+        rtp_port_end: data.rtp_port_end,
+      },
+      config
+    )
+    return response.data
   },
 }
