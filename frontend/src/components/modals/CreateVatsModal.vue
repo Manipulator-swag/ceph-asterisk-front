@@ -115,6 +115,16 @@
           />
         </div>
 
+        <div class="form-group">
+          <CustomSelect
+            v-model="formData.transport_type"
+            :options="transportTypeOptions"
+            label="Тип транспорта"
+            :disabled="isLoading"
+            @change="clearStep2Error"
+          />
+        </div>
+
         <div class="modal-actions">
           <CustomButton variant="outline" @click="prevStep" :disabled="isLoading" class="back-btn">
             Назад
@@ -144,6 +154,10 @@
               <div class="detail-item"><span class="detail-label">AMI порт:</span> {{ formData.ami_port }}</div>
               <div class="detail-item"><span class="detail-label">RTP диапазон:</span> {{ formData.rtp_port_start }} - {{ formData.rtp_port_end }}</div>
               <div class="detail-item"><span class="detail-label">Тестовые пользователи:</span> {{ formData.create_test_users ? 'Да' : 'Нет' }}</div>
+              <div class="detail-item">
+                <span class="detail-label">Тип транспорта:</span> 
+                {{ transportTypeOptions.find(opt => opt.value === formData.transport_type)?.label || formData.transport_type }}
+              </div>
             </div>
           </div>
         </div>
@@ -160,9 +174,11 @@ import { ref, reactive, watch, nextTick } from 'vue'
 import axios from 'axios'
 import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomButton from '@/components/UI/CustomButton.vue'
+import CustomSelect from '../UI/CustomSelect.vue'
 import { vatsApi } from '@/api/vatsApi'
 import { useToastStore } from '@/stores/toast'
 import type { VatsInstanceFromAPI } from '@/types/vats'
+import type { TransportType } from '@/types/vats'
 
 interface Props {
   show: boolean
@@ -185,14 +201,32 @@ let saveTimeout: ReturnType<typeof setTimeout> | null = null
 const DRAFT_KEY = 'vats_create_draft'
 const showDraftRestore = ref(false)
 
+const transportTypeOptions = [
+  { value: 'udp', label: 'UDP' },
+  { value: 'tcp', label: 'TCP' },
+  { value: 'tls', label: 'TLS' }
+]
+
 // Форма
-const formData = reactive({
+interface LocalFormData {
+  name: string
+  sip_port: number
+  http_port: number
+  ami_port: number
+  rtp_port_start: number
+  rtp_port_end: number
+  transport_type: TransportType
+  create_test_users: boolean
+}
+
+const formData: LocalFormData = reactive({
   name: '',
   sip_port: 5060,
   http_port: 8088,
   ami_port: 5038,
   rtp_port_start: 10000,
   rtp_port_end: 20000,
+  transport_type: 'udp',   // 👈 теперь строго 'udp'|'tcp'|'tls'
   create_test_users: true,
 })
 
@@ -210,6 +244,7 @@ const saveDraft = () => {
     ami_port: formData.ami_port,
     rtp_port_start: formData.rtp_port_start,
     rtp_port_end: formData.rtp_port_end,
+    transport_type: formData.transport_type,   // ✅ добавлено
     create_test_users: formData.create_test_users,
     currentStep: currentStep.value,
   }
@@ -222,7 +257,13 @@ const restoreDraft = () => {
   if (raw) {
     try {
       const draft = JSON.parse(raw)
+      // Восстанавливаем все поля
       Object.assign(formData, draft)
+      const validTransports: TransportType[] = ['udp', 'tcp', 'tls']
+      if (!validTransports.includes(formData.transport_type)) {
+        formData.transport_type = 'udp'
+      }
+      
       currentStep.value = draft.currentStep || 1
       showDraftRestore.value = false
       toast.addToast({ message: 'Черновик восстановлен', type: 'info' })
@@ -250,6 +291,7 @@ watch(() => props.show, async (newVal) => {
     formData.ami_port = 5038
     formData.rtp_port_start = 10000
     formData.rtp_port_end = 20000
+    formData.transport_type = 'udp'
     formData.create_test_users = true
     isLoading.value = false
     step1Error.value = ''
@@ -323,6 +365,10 @@ const validateStep2 = (): boolean => {
     step2Error.value = 'RTP порт начала должен быть меньше порта конца'
     return false
   }
+  if (!['udp', 'tcp', 'tls'].includes(formData.transport_type)) {
+    step2Error.value = 'Выберите корректный тип транспорта'
+    return false
+  }
   return true
 }
 
@@ -374,6 +420,7 @@ const createVats = async () => {
         ami_port: formData.ami_port,
         rtp_port_start: formData.rtp_port_start,
         rtp_port_end: formData.rtp_port_end,
+        transport_type: formData.transport_type,
         create_test_users: formData.create_test_users,
       },
       formData.create_test_users,

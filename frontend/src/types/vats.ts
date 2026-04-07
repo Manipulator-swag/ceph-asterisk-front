@@ -67,6 +67,8 @@ export interface SIPUserFromAPI {
   instance_name: string
 }
 
+export type TransportType = 'udp' | 'tcp' | 'tls'
+
 export interface VatsCreateRequest {
   name: string
   sip_port: number
@@ -74,6 +76,7 @@ export interface VatsCreateRequest {
   ami_port: number
   rtp_port_start: number
   rtp_port_end: number
+  transport_type: TransportType
   create_test_users?: boolean
 }
 

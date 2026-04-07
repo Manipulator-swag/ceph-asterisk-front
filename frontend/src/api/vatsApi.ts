@@ -81,6 +81,7 @@ export const vatsApi = {
         ami_port: data.ami_port,
         rtp_port_start: data.rtp_port_start,
         rtp_port_end: data.rtp_port_end,
+        transport_type: data.transport_type,
       },
       config
     )
