@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_CONFIG } from '@/config/api'
+import { setupMocks } from './setupMocks'
 
 export const axiosInstance = axios.create({
   baseURL: API_CONFIG.BASE_URL,
@@ -98,7 +99,7 @@ window.addEventListener('auth:logout', () => {
 })
 
 if (import.meta.env.VITE_USE_MOCK === 'true') {
-  import('./setupMocks').then(({ setupMocks }) => setupMocks(axiosInstance))
+  setupMocks(axiosInstance)
 }
 
 export default axiosInstance

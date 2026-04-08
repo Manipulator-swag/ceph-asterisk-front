@@ -281,6 +281,7 @@ import CustomButton from '@/components/UI/CustomButton.vue'
 import CustomTabs from '@/components/UI/CustomTabs.vue'
 import CustomBadge from '@/components/UI/CustomBadge.vue'
 import InternalNumbersTable from '@/components/tables/InternalNumbersTable.vue'
+import axios from 'axios'
 import { vatsApi } from '@/api/vatsApi'
 import { useToastStore } from '@/stores/toast'
 import type {
@@ -288,9 +289,9 @@ import type {
   InternalNumber,
   SIPUserCreateRequest,
   SIPUserFromAPI,
-  VatsInstanceFromAPI
+  VatsInstanceFromAPI,
+  TransportType
 } from '@/types/vats'
-import type { TransportType } from '@/types/vats'
 
 interface Props {
   show: boolean
@@ -394,8 +395,11 @@ const loadInstanceDetails = async () => {
     formData.rtp_port_end = details.rtp_port_end ?? 20000
     formData.status = details.status === 'running' ? 'Активна' : 'Отключена'
   } catch (error) {
-    console.error(error)
-    toast.addToast({ message: 'Ошибка загрузки данных ВАТС', type: 'error' })
+    const message = axios.isAxiosError(error) && error.response?.data?.detail
+      ? error.response.data.detail
+      : (error instanceof Error ? error.message : 'Ошибка загрузки')
+    toast.addToast({ message, type: 'error' })
+    numbersError.value = message
   }
 }
 
@@ -414,8 +418,11 @@ const loadInternalNumbers = async () => {
       transportType: 'local' as const,
     }))
   } catch (error) {
-    console.error(error)
-    numbersError.value = 'Не удалось загрузить внутренние номера'
+    const message = axios.isAxiosError(error) && error.response?.data?.detail
+      ? error.response.data.detail
+      : (error instanceof Error ? error.message : 'Ошибка загрузки')
+    toast.addToast({ message, type: 'error' })
+    numbersError.value = message
   } finally {
     loadingNumbers.value = false
   }
@@ -472,8 +479,11 @@ const addNumber = async () => {
     showAddNumber.value = false
     toast.addToast({ message: 'Номер успешно добавлен', type: 'success' })
   } catch (error) {
-    console.error(error)
-    numbersError.value = error instanceof Error ? error.message : 'Не удалось создать внутренний номер'
+    const message = axios.isAxiosError(error) && error.response?.data?.detail
+      ? error.response.data.detail
+      : (error instanceof Error ? error.message : 'Ошибка загрузки')
+    toast.addToast({ message, type: 'error' })
+    numbersError.value = message
   } finally {
     creatingNumber.value = false
   }
@@ -493,8 +503,11 @@ const deleteNumber = async (id: string) => {
     formData.internalNumbers = formData.internalNumbers.filter((n) => n.id !== id)
     toast.addToast({ message: 'Номер удалён', type: 'success' })
   } catch (error) {
-    console.error(error)
-    numbersError.value = error instanceof Error ? error.message : 'Не удалось удалить внутренний номер'
+    const message = axios.isAxiosError(error) && error.response?.data?.detail
+      ? error.response.data.detail
+      : (error instanceof Error ? error.message : 'Ошибка загрузки')
+    toast.addToast({ message, type: 'error' })
+    numbersError.value = message
   } finally {
     deletingNumberId.value = null
   }

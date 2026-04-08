@@ -434,21 +434,22 @@ const createVats = async () => {
     currentStep.value = 3
     emit('created', result)
   } catch (err: unknown) {
-    // Если запрос был отменён – ничего не показываем
-    if (axios.isCancel(err)) {
-      return
-    }
+    if (axios.isCancel(err)) return
+
     let msg = 'Ошибка создания ВАТС'
-    if (err && typeof err === 'object') {
-      if ('response' in err && err.response && typeof err.response === 'object') {
-        const response = err.response as { data?: { detail?: string } }
-        if (response.data?.detail) {
-          msg = response.data.detail
-        }
-      } else if (err instanceof Error) {
+    if (axios.isAxiosError(err)) {
+      if (err.response) {
+        const detail = err.response.data?.detail
+        msg = detail || `Ошибка сервера (${err.response.status})`
+      } else if (err.request) {
+        msg = `Нет ответа от сервера: ${err.message}`
+      } else {
         msg = err.message
       }
+    } else if (err instanceof Error) {
+      msg = err.message
     }
+
     step2Error.value = msg
     toast.addToast({ message: `Ошибка: ${msg}`, type: 'error' })
   } finally {

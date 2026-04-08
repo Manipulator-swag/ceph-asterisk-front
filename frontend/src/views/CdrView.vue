@@ -5,6 +5,7 @@ import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomSelect from '@/components/UI/CustomSelect.vue'
 import CDRTable from '@/components/tables/CDRTable.vue'
 import PageHeader from '@/components/UI/PageHeader.vue'
+import axios from 'axios'
 import type { CallRecord, CDRRecord } from '@/types/cdr'
 import { cdrApi } from '@/api/cdrApi'
 
@@ -40,8 +41,13 @@ const loadAllCDRData = async () => {
     applyAllFilters()
   } catch (error: unknown) {
     console.error('Ошибка при загрузке CDR:', error)
-    errorMessage.value = error instanceof Error ? error.message : 'Не удалось загрузить историю звонков'
-    allCdrData.value = []
+    if (axios.isAxiosError(error)) {
+      errorMessage.value = error.response?.data?.detail || error.message
+    } else if (error instanceof Error) {
+      errorMessage.value = error.message
+    } else {
+      errorMessage.value = 'Не удалось загрузить историю звонков'
+    }
   } finally {
     isLoading.value = false
   }

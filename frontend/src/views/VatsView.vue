@@ -122,10 +122,6 @@ const handleVATSDeleted = async (id: string) => {
   } catch (error: unknown) {
     console.error('Полная ошибка при удалении ВАТС:', error)
     errorMessage.value = 'Не удалось удалить ВАТС'
-
-    // Показываем mock данные для тестирования UI
-    console.log('Используем mock данные для демонстрации')
-    serversData.value = serversData.value.filter((item) => item.id !== id)
   } finally {
     isLoading.value = false
   }
