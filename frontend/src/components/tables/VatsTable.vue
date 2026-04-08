@@ -57,9 +57,6 @@ const getStatusIconClass = (status: string) => {
               <CustomButton class="cell-actions--edit_btn" @click="emit('edit', item)">
                 Просмотр
               </CustomButton>
-              <CustomButton class="cell-actions--delete_btn" @click="emit('delete', item.id)">
-                Удалить
-              </CustomButton>
             </td>
           </tr>
         </tbody>

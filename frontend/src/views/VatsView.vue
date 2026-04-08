@@ -127,6 +127,12 @@ const handleVATSDeleted = async (id: string) => {
   }
 }
 
+const handleVATSDeletedFromModal = async () => {
+  await fetchVatsList()
+  closeDetailsModal()
+  toast.addToast({ message: 'ВАТС удалена', type: 'success' })
+}
+
 // Функция для форматирования даты
 const formatDate = (date: Date): string => {
   const day = String(date.getDate()).padStart(2, '0')
@@ -210,7 +216,7 @@ const reloadData = () => {
       :vats-data="editingVats"
       @close="closeDetailsModal"
       @updated="handleVATSUpdated"
-      :is-loading="isLoading"
+      @deleted="handleVATSDeletedFromModal"
     />
   </div>
 </template>

@@ -269,6 +269,23 @@
           </div>
         </template>
       </CustomTabs>
+      <div class="delete-section">
+        <hr class="delete-divider" />
+        <div class="delete-actions">
+          <CustomButton
+            variant="danger"
+            @click="handleDelete"
+            :disabled="isSaving || isDeleting"
+          >
+            <span v-if="isDeleting" class="button-loading">
+              <span class="spinner"></span>
+              Удаление...
+            </span>
+            <span v-else>Удалить ВАТС</span>
+          </CustomButton>
+          <p class="delete-warning">⚠️ Это действие необратимо. Будут удалены все внутренние номера и конфигурация.</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -301,6 +318,7 @@ interface Props {
 interface Emits {
   (e: 'close'): void
   (e: 'updated'): void
+  (e: 'deleted'): void
 }
 
 const props = defineProps<Props>()
@@ -321,6 +339,7 @@ const creatingNumber = ref(false)
 const deletingNumberId = ref<string | null>(null)
 const numbersError = ref('')
 const showAddNumber = ref(false)
+const isDeleting = ref(false)
 
 // Данные инстанса (полные)
 const instanceDetails = ref<VatsInstanceFromAPI | null>(null)
@@ -572,6 +591,27 @@ const handleSave = async () => {
   }
 }
 
+const handleDelete = async () => {
+  if (!props.vatsData?.id) return
+  const confirmed = confirm('Вы уверены, что хотите удалить эту ВАТС? Все внутренние номера и настройки будут потеряны. Действие необратимо.')
+  if (!confirmed) return
+
+  isDeleting.value = true
+  try {
+    await vatsApi.deleteVats(props.vatsData.id)
+    toast.addToast({ message: `ВАТС "${formData.name}" удалена`, type: 'success' })
+    emit('deleted')
+    closeModal()
+  } catch (error) {
+    const message = axios.isAxiosError(error) && error.response?.data?.detail
+      ? error.response.data.detail
+      : (error instanceof Error ? error.message : 'Ошибка удаления')
+    toast.addToast({ message, type: 'error' })
+  } finally {
+    isDeleting.value = false
+  }
+}
+
 const sendCommand = async () => {
   if (!commandText.value.trim()) return
   if (!props.vatsData?.name) {
@@ -674,6 +714,30 @@ const sendCommand = async () => {
   gap: var(--spacing-sm);
   border-top: 1px solid var(--color-border);
   padding-top: var(--spacing-md);
+}
+
+.delete-section {
+  margin-top: var(--spacing-lg);
+}
+
+.delete-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: var(--spacing-md) 0;
+}
+
+.delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.delete-warning {
+  font-size: 0.85rem;
+  color: var(--color-error);
+  margin: 0;
 }
 
 /* Утилитарные классы */
