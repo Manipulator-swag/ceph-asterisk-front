@@ -3,7 +3,6 @@
     <div class="modal-content large" @click.stop>
       <!-- Шапка -->
       <div class="modal-header">
-        <!-- Первая строка: кнопка "Назад" + информация о ВАТС -->
         <div class="header-row">
           <CustomButton variant="outline" @click="closeModal"> Назад </CustomButton>
           <div class="header-info">
@@ -17,8 +16,6 @@
             </div>
           </div>
         </div>
-      
-        <!-- Вторая строка: кнопки действий -->
         <div class="header-actions">
           <CustomButton variant="outline" @click="handleReload" :disabled="isSaving">
             Обновить
@@ -43,6 +40,7 @@
                   <label for="name" class="label">Название ВАТС *</label>
                   <CustomInput
                     id="name"
+                    name="name"
                     v-model="formData.name"
                     placeholder="Введите название"
                     :with-icon="false"
@@ -54,6 +52,7 @@
                   <label for="sip_port" class="label">SIP-порт *</label>
                   <CustomInput
                     id="sip_port"
+                    name="sip_port"
                     type="number"
                     v-model="formData.sip_port"
                     :with-icon="false"
@@ -65,6 +64,7 @@
                   <label for="http_port" class="label">HTTP-порт</label>
                   <CustomInput
                     id="http_port"
+                    name="http_port"
                     type="number"
                     v-model="formData.http_port"
                     :with-icon="false"
@@ -76,6 +76,7 @@
                   <label for="ami_port" class="label">AMI-порт (только чтение)</label>
                   <CustomInput
                     id="ami_port"
+                    name="ami_port"
                     type="number"
                     v-model="formData.ami_port"
                     :with-icon="false"
@@ -87,6 +88,7 @@
                   <label for="rtp_start" class="label">RTP начало (только чтение)</label>
                   <CustomInput
                     id="rtp_start"
+                    name="rtp_start"
                     type="number"
                     v-model="formData.rtp_port_start"
                     :with-icon="false"
@@ -98,6 +100,7 @@
                   <label for="rtp_end" class="label">RTP конец (только чтение)</label>
                   <CustomInput
                     id="rtp_end"
+                    name="rtp_end"
                     type="number"
                     v-model="formData.rtp_port_end"
                     :with-icon="false"
@@ -109,6 +112,7 @@
                   <label for="status" class="label">Статус</label>
                   <CustomSelect
                     id="status"
+                    name="status"
                     v-model="formData.status"
                     :options="statusOptions"
                     :disabled="isSaving"
@@ -143,6 +147,7 @@
                     <label for="new-number" class="label">Внутренний номер *</label>
                     <CustomInput
                       id="new-number"
+                      name="new-number"
                       v-model="newNumber.number"
                       placeholder="101"
                       :with-icon="false"
@@ -153,6 +158,7 @@
                     <label for="new-password" class="label">Пароль *</label>
                     <CustomInput
                       id="new-password"
+                      name="new-password"
                       type="password"
                       v-model="newNumber.password"
                       placeholder="••••••"
@@ -164,6 +170,7 @@
                     <label for="new-callerid" class="label">Caller ID *</label>
                     <CustomInput
                       id="new-callerid"
+                      name="new-callerid"
                       v-model="newNumber.callerId"
                       placeholder="Иванов И.И."
                       :with-icon="false"
@@ -174,6 +181,7 @@
                     <label for="new-external" class="label">Внешний номер</label>
                     <CustomInput
                       id="new-external"
+                      name="new-external"
                       v-model="newNumber.externalNumber"
                       placeholder="+79161234567"
                       :with-icon="false"
@@ -184,6 +192,7 @@
                     <label for="new-transport" class="label">Тип транспорта</label>
                     <CustomSelect
                       id="new-transport"
+                      name="new-transport"
                       v-model="newNumber.transportType"
                       :options="numberTransportOptions"
                       :disabled="creatingNumber"
@@ -193,6 +202,7 @@
                     <label for="new-sip-transport" class="label">SIP-транспорт</label>
                     <CustomSelect
                       id="new-sip-transport"
+                      name="new-sip-transport"
                       v-model="newNumber.sipTransport"
                       :options="sipTransportOptions"
                       :disabled="creatingNumber"
@@ -231,6 +241,7 @@
                 <label for="command" class="label">Команда (например, `sip show peers`)</label>
                 <textarea
                   id="command"
+                  name="command"
                   v-model="commandText"
                   class="command-textarea"
                   rows="4"
