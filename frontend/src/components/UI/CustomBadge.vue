@@ -26,12 +26,12 @@ withDefaults(defineProps<Props>(), {
 }
 
 .badge--default {
-  background-color: var(--color-primary);
+  background-color: var(--color-success);
   color: white;
 }
 
 .badge--secondary {
-  background-color: var(--vt-c-gray);
+  background-color: var(--color-error);
   color: white;
 }
 

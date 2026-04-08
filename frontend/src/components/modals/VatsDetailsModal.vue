@@ -3,11 +3,12 @@
     <div class="modal-content large" @click.stop>
       <!-- Шапка -->
       <div class="modal-header">
-        <div class="flex items-center gap-4 mb-6">
+        <!-- Первая строка: кнопка "Назад" + информация о ВАТС -->
+        <div class="header-row">
           <CustomButton variant="outline" @click="closeModal"> Назад </CustomButton>
-          <div class="flex-1">
+          <div class="header-info">
             <h1 class="modal-title">{{ instanceDetails?.name || vatsData?.name }}</h1>
-            <div class="flex items-center gap-3">
+            <div class="info-badges">
               <CustomBadge :variant="formData.status === 'Активна' ? 'default' : 'secondary'">
                 {{ formData.status }}
               </CustomBadge>
@@ -15,18 +16,20 @@
               <span class="text-gray-600">HTTP порт: {{ formData.http_port }}</span>
             </div>
           </div>
-          <div class="flex gap-2">
-            <CustomButton variant="outline" @click="handleReload" :disabled="isSaving">
-              Перечитать конфиг
-            </CustomButton>
-            <CustomButton @click="handleSave" :disabled="isSaving">
-              <span v-if="isSaving" class="button-loading">
-                <span class="spinner"></span>
-                Сохранение...
-              </span>
-              <span v-else>Сохранить</span>
-            </CustomButton>
-          </div>
+        </div>
+      
+        <!-- Вторая строка: кнопки действий -->
+        <div class="header-actions">
+          <CustomButton variant="outline" @click="handleReload" :disabled="isSaving">
+            Обновить
+          </CustomButton>
+          <CustomButton @click="handleSave" :disabled="isSaving">
+            <span v-if="isSaving" class="button-loading">
+              <span class="spinner"></span>
+              Сохранение...
+            </span>
+            <span v-else>Сохранить</span>
+          </CustomButton>
         </div>
       </div>
 
@@ -612,14 +615,41 @@ const sendCommand = async () => {
 }
 
 .modal-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
   margin-bottom: var(--spacing-md);
+}
+
+.header-info {
+  flex: 1;
 }
 
 .modal-title {
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--color-heading);
-  margin: 0;
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.info-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-md);
 }
 
 /* Утилитарные классы */
@@ -738,12 +768,27 @@ const sendCommand = async () => {
   .grid-cols-2 {
     grid-template-columns: 1fr;
   }
+  .header-row {
+    align-items: stretch;
+  }
+  .header-actions {
+    justify-content: stretch;
+  }
+  .header-actions .custom-button {
+    flex: 1;
+  }
+  .info-badges {
+    gap: var(--spacing-sm);
+  }
 }
 @media (max-width: 480px) {
   .modal-content.large {
     padding: var(--spacing-sm);
     margin: var(--spacing-sm);
     width: calc(100% - 2 * var(--spacing-sm));
+  }
+  .info-badges {
+    align-items: flex-start;
   }
 }
 </style>

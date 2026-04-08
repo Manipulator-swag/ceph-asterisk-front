@@ -97,4 +97,8 @@ window.addEventListener('auth:logout', () => {
   }
 })
 
+if (import.meta.env.VITE_USE_MOCK === 'true') {
+  import('./setupMocks').then(({ setupMocks }) => setupMocks(axiosInstance))
+}
+
 export default axiosInstance

@@ -4,7 +4,8 @@
       <table class="cdr-table">
         <thead>
           <tr>
-            <th class="column-date">Дата и время</th>
+            <th class="column-answer">Дата ответа</th>
+            <th class="column-end">Дата окончания</th>
             <th class="column-from">От</th>
             <th class="column-to">Кому</th>
             <th class="column-duration">Длительность</th>
@@ -14,7 +15,8 @@
         </thead>
         <tbody>
           <tr v-for="(call, index) in callsData" :key="index" class="table-row">
-            <td class="cell-date">{{ call.dateTime }}</td>
+            <td class="cell-answer">{{ call.answerDateTime }}</td>
+            <td class="cell-end">{{ call.endDateTime }}</td>
             <td class="cell-from">{{ call.from }}</td>
             <td class="cell-to">{{ call.to }}</td>
             <td class="cell-duration">{{ call.duration }}</td>

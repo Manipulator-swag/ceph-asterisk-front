@@ -16,8 +16,11 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const cdrData = ref<CDRRecord[]>([])
 const allCdrData = ref<CDRRecord[]>([])
+const searchDebounce = ref<number | null>(null) 
 
-const searchDebounce = ref<NodeJS.Timeout | null>(null)
+const hasActiveFilters = computed(() => {
+  return searchQuery.value.trim() !== '' || selectedStatus.value !== 'all' || selectedDate.value !== ''
+})
 
 const statusOptions = [
   { value: 'all', label: 'Все' },
@@ -32,16 +35,13 @@ const loadAllCDRData = async () => {
   errorMessage.value = ''
 
   try {
-    allCdrData.value = await cdrApi.getCDR(1000)
+    const response = await cdrApi.getCDR(1000)
+    allCdrData.value = Array.isArray(response) ? response : []
     applyAllFilters()
   } catch (error: unknown) {
     console.error('Ошибка при загрузке CDR:', error)
-
-    if (error instanceof Error) {
-      errorMessage.value = error.message || 'Не удалось загрузить историю звонков'
-    } else {
-      errorMessage.value = 'Не удалось загрузить историю звонков'
-    }
+    errorMessage.value = error instanceof Error ? error.message : 'Не удалось загрузить историю звонков'
+    allCdrData.value = []
   } finally {
     isLoading.value = false
   }
@@ -66,36 +66,30 @@ const filterDataByStatus = (data: CDRRecord[], status: string): CDRRecord[] => {
 
 const filterDataByDate = (data: CDRRecord[], date: string): CDRRecord[] => {
   if (!date) return data
-
   const targetDate = new Date(date)
   const targetDateString = targetDate.toISOString().split('T')[0]
-
   return data.filter((record) => {
-    const recordDate = new Date(record.calldate)
+    const recordDate = new Date(record.answer)
     const recordDateString = recordDate.toISOString().split('T')[0]
     return recordDateString === targetDateString
   })
 }
 
 const applyAllFilters = () => {
-  let filteredData = [...allCdrData.value]
+  let filteredData = Array.isArray(allCdrData.value) ? [...allCdrData.value] : []
 
   if (searchQuery.value.trim()) {
     filteredData = filterDataByNumber(filteredData, searchQuery.value)
   }
-
   if (selectedStatus.value !== 'all') {
     filteredData = filterDataByStatus(filteredData, selectedStatus.value)
   }
-
   if (selectedDate.value) {
     filteredData = filterDataByDate(filteredData, selectedDate.value)
   }
-
   cdrData.value = filteredData
 }
 
-// Исправленные обработчики с правильными типами
 const handleSearchInput = (value: string | number | undefined) => {
   searchQuery.value = value !== undefined ? String(value) : ''
 
@@ -119,8 +113,10 @@ const handleDateChange = (value: string | number | undefined) => {
 }
 
 const transformCDRToCallRecord = (cdr: CDRRecord): CallRecord => {
-  const date = new Date(cdr.calldate)
-  const formattedDate = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+  const formatDateTime = (isoString: string): string => {
+    const date = new Date(isoString)
+    return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
+  }
 
   const formatDuration = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60)
@@ -136,7 +132,8 @@ const transformCDRToCallRecord = (cdr: CDRRecord): CallRecord => {
   }
 
   return {
-    dateTime: formattedDate,
+    answerDateTime: formatDateTime(cdr.answer),
+    endDateTime: formatDateTime(cdr.end),
     from: cdr.src,
     to: cdr.dst,
     duration: formatDuration(cdr.duration),
@@ -153,7 +150,7 @@ const resetFilters = () => {
   searchQuery.value = ''
   selectedStatus.value = 'all'
   selectedDate.value = ''
-  cdrData.value = allCdrData.value
+  cdrData.value = [...allCdrData.value]
 }
 
 const exportToJson = () => {
@@ -281,21 +278,12 @@ onUnmounted(() => {
     <div class="filter-info">
       <span class="results-count">
         Найдено записей: {{ callsData.length }}
-        <span
-          v-if="searchQuery || selectedStatus !== 'all' || selectedDate"
-          class="client-filter-note"
-        >
-          (фильтрация на клиенте)
-        </span>
-      </span>
-      <span v-if="searchQuery || selectedStatus !== 'all' || selectedDate" class="active-filters">
-        (активные фильтры)
       </span>
       <CustomButton
         class="reset-button"
         variant="outline"
         @click="resetFilters"
-        :disabled="isLoading"
+        :disabled="isLoading || !hasActiveFilters"
       >
         Сбросить фильтры
       </CustomButton>
@@ -365,6 +353,11 @@ onUnmounted(() => {
 
 .reset-button {
   margin: 0;
+}
+
+.reset-button:disabled {
+  opacity: 0.3;
+  cursor: auto;
 }
 
 .results-count {
@@ -480,12 +473,11 @@ onUnmounted(() => {
   }
 
   .header-actions {
-    flex-direction: column;
+    align-items: flex-end;
     width: 100%;
   }
 
   .filter-info {
-    flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-sm);
   }

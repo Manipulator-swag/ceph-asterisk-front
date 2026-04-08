@@ -31,13 +31,13 @@
             <td class="cell-date">{{ file.uploadDate }}</td>
             <td class="cell-actions">
               <div class="actions-wrapper">
-                <button
+                <CustomButton
                   class="action-btn action-delete"
                   @click="deleteFile(file)"
                   :title="`Удалить ${file.name}`"
                 >
                   Удалить
-                </button>
+                </CustomButton>
               </div>
             </td>
           </tr>
@@ -57,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+import CustomButton from '../UI/CustomButton.vue'
 interface AudioFile {
   name: string
   format: string
@@ -259,19 +260,9 @@ const deleteFile = (file: AudioFile) => {
   white-space: nowrap;
 }
 
-.action-delete {
-  background-color: var(--color-error);
-  color: white;
-}
-
 .action-delete:hover:not(:disabled) {
   background-color: var(--color-error);
   filter: brightness(0.9);
-}
-
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* Состояние пустой таблицы */

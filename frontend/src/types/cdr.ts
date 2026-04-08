@@ -1,6 +1,7 @@
 export interface CDRRecord {
   id: number
-  calldate: string
+  answer: string
+  end: string
   clid: string
   src: string
   dst: string
@@ -31,7 +32,8 @@ export interface CDRFilter {
 }
 
 export interface CallRecord {
-  dateTime: string
+  answerDateTime: string
+  endDateTime: string
   from: string
   to: string
   duration: string
