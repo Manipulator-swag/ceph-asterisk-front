@@ -73,11 +73,15 @@ const filterDataByStatus = (data: CDRRecord[], status: string): CDRRecord[] => {
 const filterDataByDate = (data: CDRRecord[], date: string): CDRRecord[] => {
   if (!date) return data
   const targetDate = new Date(date)
-  const targetDateString = targetDate.toISOString().split('T')[0]
+  const targetYear = targetDate.getFullYear()
+  const targetMonth = targetDate.getMonth()
+  const targetDay = targetDate.getDate()
+
   return data.filter((record) => {
     const recordDate = new Date(record.answer)
-    const recordDateString = recordDate.toISOString().split('T')[0]
-    return recordDateString === targetDateString
+    return recordDate.getFullYear() === targetYear &&
+           recordDate.getMonth() === targetMonth &&
+           recordDate.getDate() === targetDay
   })
 }
 

@@ -8,7 +8,6 @@
 *.css text eol=lf
 *.html text eol=lf
 *.json text eol=lf
-*.svg text eol=lf   # SVG – текстовый формат, тоже нормализуем
 
 # Бинарные файлы (не трогать)
 *.png binary
