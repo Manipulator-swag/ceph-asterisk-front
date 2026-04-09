@@ -108,6 +108,7 @@ const getStatusIconClass = (status: string) => {
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text);
   font-size: 0.9375rem;
+  vertical-align: middle;
 }
 
 .table-row:hover {
@@ -153,11 +154,6 @@ const getStatusIconClass = (status: string) => {
   gap: var(--spacing-xs);
   font-weight: 500;
   color: var(--color-heading);
-}
-
-.cell-actions {
-  display: flex;
-  gap: var(--spacing-xs);
 }
 
 /* Статусы */
@@ -240,7 +236,10 @@ const getStatusIconClass = (status: string) => {
 
   .cell-actions {
     flex-direction: column;
-    gap: 0.25rem;
+    align-items: stretch;
+  }
+  .cell-actions .custom-button {
+    width: 100%;
   }
 
   .status-badge {

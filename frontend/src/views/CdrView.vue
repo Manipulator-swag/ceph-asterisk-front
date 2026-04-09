@@ -5,6 +5,7 @@ import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomSelect from '@/components/UI/CustomSelect.vue'
 import CDRTable from '@/components/tables/CDRTable.vue'
 import PageHeader from '@/components/UI/PageHeader.vue'
+import CallDetailsModal from '@/components/modals/CallDetailsModal.vue'
 import axios from 'axios'
 import type { CallRecord, CDRRecord } from '@/types/cdr'
 import { cdrApi } from '@/api/cdrApi'
@@ -18,7 +19,13 @@ const errorMessage = ref('')
 const cdrData = ref<CDRRecord[]>([])
 const allCdrData = ref<CDRRecord[]>([])
 const searchDebounce = ref<number | null>(null) 
+const showCallDetails = ref(false)
+const selectedCall = ref<CallRecord | null>(null)
 
+const openCallDetails = (call: CallRecord) => {
+  selectedCall.value = call
+  showCallDetails.value = true
+}
 const hasActiveFilters = computed(() => {
   return searchQuery.value.trim() !== '' || selectedStatus.value !== 'all' || selectedDate.value !== ''
 })
@@ -308,8 +315,17 @@ onUnmounted(() => {
         <p>Нет данных о звонках</p>
         <CustomButton @click="loadAllCDRData">Обновить</CustomButton>
       </div>
-      <CDRTable v-else :calls-data="callsData" />
+      <CDRTable
+        v-else
+        :calls-data="callsData"
+        @details="openCallDetails"
+      />
     </main>
+    <CallDetailsModal
+      :show="showCallDetails"
+      :call="selectedCall"
+      @close="showCallDetails = false"
+    />
   </div>
 </template>
 

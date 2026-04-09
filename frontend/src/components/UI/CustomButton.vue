@@ -15,7 +15,6 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   padding: var(--spacing-sm);
-  margin-top: var(--spacing-md);
 }
 
 .custom-button:hover {

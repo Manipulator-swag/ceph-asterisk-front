@@ -11,6 +11,7 @@
             <th class="column-duration">Длительность</th>
             <th class="column-status">Статус</th>
             <th class="column-vats">ВАТС</th>
+            <th class="column-actions">Действия</th>
           </tr>
         </thead>
         <tbody>
@@ -26,6 +27,11 @@
               </span>
             </td>
             <td class="cell-vats">{{ call.vats }}</td>
+            <td class="cell-actions">
+              <CustomButton variant="outline" size="sm" @click="emit('details', call)">
+                Детали
+              </CustomButton>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -35,12 +41,18 @@
 
 <script setup lang="ts">
 import type { CallRecord } from '@/types/cdr'
+import CustomButton from '@/components/UI/CustomButton.vue'
 
 interface Props {
   callsData: CallRecord[]
 }
 
+interface Emits {
+  (e: 'details', call: CallRecord): void
+}
+
 defineProps<Props>()
+const emit = defineEmits<Emits>()
 
 const getStatusClass = (status: string): string => {
   const statusClasses: { [key: string]: string } = {
