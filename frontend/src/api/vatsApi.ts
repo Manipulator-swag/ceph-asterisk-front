@@ -48,6 +48,13 @@ export const vatsApi = {
     return response.data
   },
 
+  async getContexts(instanceName: string): Promise<string[]> {
+    const response = await axiosInstance.get<string[]>(
+      `${API_CONFIG.ENDPOINTS.INSTANCES}get_contexts/${instanceName}`
+    )
+    return response.data
+  },
+
   async updateVats(id: string, updateData: AsteriskInstanceUpdate): Promise<VatsInstanceFromAPI> {
     const response = await axiosInstance.put<VatsInstanceFromAPI>(
       `${API_CONFIG.ENDPOINTS.INSTANCES}${id}`,

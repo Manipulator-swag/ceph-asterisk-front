@@ -19,7 +19,7 @@
               <td>{{ number.callerId }}</td>
               <td>
                 <CustomBadge variant="outline">
-                  {{ number.context === 'from-internal' ? 'Локальный' : 'Внешний' }}
+                  {{ number.context }}
                 </CustomBadge>
               </td>
               <td>

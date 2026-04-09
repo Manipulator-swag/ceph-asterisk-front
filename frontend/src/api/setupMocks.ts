@@ -37,4 +37,8 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     }
     return [404, { detail: 'Users not found' }]
   })
+
+  mock.onGet(new RegExp(`${API_CONFIG.ENDPOINTS.INSTANCES}get_contexts/[^/]+$`)).reply(() => {
+    return [200, ['from-internal', 'from-external', 'custom-context']]
+  })
 }

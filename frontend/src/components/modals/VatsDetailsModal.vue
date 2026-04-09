@@ -176,7 +176,7 @@
                       id="new-context"
                       name="new-context"
                       v-model="newNumber.context"
-                      :options="contextOptions"
+                      :options="contextSelectOptions"
                       :disabled="creatingNumber"
                     />
                   </div>
@@ -273,7 +273,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomSelect from '@/components/UI/CustomSelect.vue'
 import CustomButton from '@/components/UI/CustomButton.vue'
@@ -315,9 +315,16 @@ const sipTransportOptions = [
   { value: 'tls', label: 'TLS' },
 ]
 
-const contextOptions = [
-  { value: 'from-internal', label: 'Локальный' },
-  { value: 'from-external', label: 'Внешний' },
+const contextSelectOptions = computed(() => {
+  return availableContexts.value.map(ctx => ({
+    value: ctx,
+    label: ctx,
+  }))
+})
+
+const statusOptions = [
+  { value: 'Активна', label: 'Активна' },
+  { value: 'Отключена', label: 'Отключена' },
 ]
 
 // Состояния
@@ -329,6 +336,15 @@ const deletingNumberId = ref<string | null>(null)
 const numbersError = ref('')
 const showAddNumber = ref(false)
 const isDeleting = ref(false)
+const availableContexts = ref<string[]>([])
+const isLoadingContexts = ref(false)
+const contextsError = ref('')
+
+// Команды
+const commandText = ref('')
+const isSendingCommand = ref(false)
+const commandResult = ref('')
+const commandError = ref('')
 
 // Данные инстанса (полные)
 const instanceDetails = ref<VatsInstanceFromAPI | null>(null)
@@ -349,7 +365,7 @@ interface NewNumberForm {
   number: string
   password: string
   callerId: string
-  context: 'from-internal' | 'from-external'
+  context: string
   sipTransport: TransportType
 }
 
@@ -364,33 +380,17 @@ const formData = reactive<ExtendedVatsForm>({
   internalNumbers: [],
 })
 
-// Команды
-const commandText = ref('')
-const isSendingCommand = ref(false)
-const commandResult = ref('')
-const commandError = ref('')
-
-// Опции для селектов
-const statusOptions = [
-  { value: 'Активна', label: 'Активна' },
-  { value: 'Отключена', label: 'Отключена' },
-]
-
 const mapApiUserToInternal = (user: SIPUserFromAPI): InternalNumber => {
-  // Извлекаем SIP-транспорт (удаляем префикс "transport-")
   let sipTransport: TransportType = 'udp'
   if (user.transport === 'transport-tcp') sipTransport = 'tcp'
   else if (user.transport === 'transport-tls') sipTransport = 'tls'
   else sipTransport = 'udp'
 
-  // Определяем локальный/внешний тип из context
-  const contextType = user.context === 'from-internal' ? 'from-internal' : 'from-external'
-
   return {
     id: user.id,
     number: user.id,
     callerId: user.callerid,
-    context: contextType,
+    context: user.context,
     sipTransport: sipTransport,
   }
 }
@@ -429,6 +429,27 @@ const loadInstanceDetails = async () => {
       : (error instanceof Error ? error.message : 'Ошибка загрузки')
     toast.addToast({ message, type: 'error' })
     numbersError.value = message
+  }
+}
+
+const loadContexts = async () => {
+  const instanceName = instanceDetails.value?.name || props.vatsData?.name
+  if (!instanceName) return
+
+  isLoadingContexts.value = true
+  contextsError.value = ''
+  try {
+    const contexts = await vatsApi.getContexts(instanceName)
+    availableContexts.value = contexts
+  } catch (error) {
+    const message = axios.isAxiosError(error) && error.response?.data?.detail
+      ? error.response.data.detail
+      : (error instanceof Error ? error.message : 'Ошибка загрузки контекстов')
+    contextsError.value = message
+    toast.addToast({ message, type: 'error' })
+    availableContexts.value = ['from-internal', 'from-external']
+  } finally {
+    isLoadingContexts.value = false
   }
 }
 
@@ -541,6 +562,7 @@ watch(
     if (newVal && props.vatsData) {
       await loadInstanceDetails()
       await loadInternalNumbers()
+      await loadContexts()
     }
   },
   { immediate: true }

@@ -12,7 +12,7 @@ export interface InternalNumber {
   number: string
   password?: string
   callerId: string
-  context: 'from-internal' | 'from-external'
+  context: string
   sipTransport: TransportType
 }
 
