@@ -309,6 +309,7 @@ import type {
   VatsInstanceFromAPI,
   TransportType
 } from '@/types/vats'
+import { useVatsCacheStore } from '@/stores/vatsCache'
 
 interface Props {
   show: boolean
@@ -324,6 +325,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const toast = useToastStore()
+const cacheStore = useVatsCacheStore()
 
 const sipTransportOptions = [
   { value: 'udp', label: 'UDP' },
@@ -425,10 +427,28 @@ const loadInstanceDetails = async () => {
 // Загрузка внутренних номеров
 const loadInternalNumbers = async () => {
   if (!props.vatsData?.id) return
+  const instanceId = Number(props.vatsData.id)
+
+  // Пытаемся получить данные из кэша
+  const cachedUsers = cacheStore.getUsers(instanceId)
+  if (cachedUsers) {
+    formData.internalNumbers = cachedUsers.map((user: SIPUserFromAPI) => ({
+      id: user.id.toString(),
+      number: user.username,
+      callerId: user.caller_id,
+      externalNumber: user.account_code || undefined,
+      transportType: 'local' as const,
+    }))
+    return
+  }
+
+  // Кэша нет – загружаем с сервера
   loadingNumbers.value = true
   numbersError.value = ''
   try {
-    const users = await vatsApi.getVatsUsers(Number(props.vatsData.id))
+    const users = await vatsApi.getVatsUsers(instanceId)
+    // Сохраняем в кэш
+    cacheStore.setUsers(instanceId, users)
     formData.internalNumbers = users.map((user: SIPUserFromAPI) => ({
       id: user.id.toString(),
       number: user.username,
@@ -497,6 +517,7 @@ const addNumber = async () => {
     resetNewNumber()
     showAddNumber.value = false
     toast.addToast({ message: 'Номер успешно добавлен', type: 'success' })
+    cacheStore.invalidate(instanceId)
   } catch (error) {
     const message = axios.isAxiosError(error) && error.response?.data?.detail
       ? error.response.data.detail
@@ -521,6 +542,7 @@ const deleteNumber = async (id: string) => {
     await vatsApi.deleteVatsUser(instanceId, id)
     formData.internalNumbers = formData.internalNumbers.filter((n) => n.id !== id)
     toast.addToast({ message: 'Номер удалён', type: 'success' })
+    cacheStore.invalidate(instanceId)
   } catch (error) {
     const message = axios.isAxiosError(error) && error.response?.data?.detail
       ? error.response.data.detail
