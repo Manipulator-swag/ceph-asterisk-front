@@ -10,19 +10,31 @@ export interface VatsFormData {
 export interface InternalNumber {
   id: string
   number: string
-  password?: string //опциональное, т.к. при получении с бэкенда пароль не возвращается
-  callerId: string
+  password?: string
+  callerId: string 
   externalNumber?: string
   transportType: 'local' | 'external'
+}
+
+export interface AorSchema {
+  pk: number
+  id: string
+  reg_server: string | null
+  max_contacts: number
+}
+
+export interface AuthSchema {
+  pk: number
+  id: string
+  auth_type: string
+  username: string | null
 }
 
 export interface SIPUserCreateRequest {
   username: string
   password: string
-  caller_id: string
-  account_code?: string
   context?: string
-  instance_name: string
+  max_contacts?: number
   transport?: TransportType
 }
 
@@ -61,13 +73,14 @@ export interface VatsInstanceFromAPI {
 }
 
 export interface SIPUserFromAPI {
-  id: number
-  username: string
-  password?: string
-  caller_id: string
-  account_code?: string
-  context?: string
-  instance_name: string
+  pk: number
+  id: string
+  transport: string
+  context: string
+  allow: string
+  disallow: string
+  aors_fk: AorSchema
+  auths_fk: AuthSchema
 }
 
 export interface VatsCreateRequest {

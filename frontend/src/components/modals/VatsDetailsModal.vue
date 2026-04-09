@@ -305,7 +305,6 @@ import type {
   VatsTableItem,
   InternalNumber,
   SIPUserCreateRequest,
-  SIPUserFromAPI,
   VatsInstanceFromAPI,
   TransportType
 } from '@/types/vats'
@@ -428,33 +427,26 @@ const loadInstanceDetails = async () => {
 const loadInternalNumbers = async () => {
   if (!props.vatsData?.id) return
   const instanceId = Number(props.vatsData.id)
-
-  // Пытаемся получить данные из кэша
-  const cachedUsers = cacheStore.getUsers(instanceId)
-  if (cachedUsers) {
-    formData.internalNumbers = cachedUsers.map((user: SIPUserFromAPI) => ({
-      id: user.id.toString(),
-      number: user.username,
-      callerId: user.caller_id,
-      externalNumber: user.account_code || undefined,
-      transportType: 'local' as const,
+  const cached = cacheStore.getUsers(instanceId)
+  if (cached) {
+    formData.internalNumbers = cached.map(user => ({
+      id: user.id,
+      number: user.id,
+      callerId: user.auths_fk.username || user.id,
+      transportType: 'local', // или вычислять из user.transport
     }))
     return
   }
-
-  // Кэша нет – загружаем с сервера
   loadingNumbers.value = true
   numbersError.value = ''
   try {
     const users = await vatsApi.getVatsUsers(instanceId)
-    // Сохраняем в кэш
     cacheStore.setUsers(instanceId, users)
-    formData.internalNumbers = users.map((user: SIPUserFromAPI) => ({
-      id: user.id.toString(),
-      number: user.username,
-      callerId: user.caller_id,
-      externalNumber: user.account_code || undefined,
-      transportType: 'local' as const,
+    formData.internalNumbers = users.map(user => ({
+      id: user.id,
+      number: user.id,
+      callerId: user.auths_fk.username || user.id,
+      transportType: 'local',
     }))
   } catch (error) {
     const message = axios.isAxiosError(error) && error.response?.data?.detail
@@ -499,19 +491,15 @@ const addNumber = async () => {
     const createData: SIPUserCreateRequest = {
       username: newNumber.number,
       password: newNumber.password,
-      caller_id: newNumber.callerId,
-      account_code: newNumber.externalNumber || '',
       context: 'internal',
-      instance_name: props.vatsData.name,
-      transport: newNumber.sipTransport,
+      transport: newNumber.sipTransport, // если выбран SIP-транспорт
     }
     const createdUser = await vatsApi.createVatsUser(instanceId, createData)
     const internalNumber: InternalNumber = {
-      id: createdUser.id.toString(),
-      number: createdUser.username,
-      callerId: createdUser.caller_id,
-      externalNumber: createdUser.account_code || undefined,
-      transportType: newNumber.transportType === 'external' ? 'external' : 'local',
+      id: createdUser.id,
+      number: createdUser.id,
+      callerId: createdUser.auths_fk.username || createdUser.id,
+      transportType: 'local',
     }
     formData.internalNumbers.push(internalNumber)
     resetNewNumber()
@@ -532,17 +520,14 @@ const addNumber = async () => {
 // Удаление номера
 const deleteNumber = async (id: string) => {
   if (!props.vatsData) return
-  if (!confirm('Вы уверены, что хотите удалить этот внутренний номер?')) return
-
+  if (!confirm('Удалить номер?')) return
   deletingNumberId.value = id
-  numbersError.value = ''
-
   try {
     const instanceId = Number(props.vatsData.id)
     await vatsApi.deleteVatsUser(instanceId, id)
-    formData.internalNumbers = formData.internalNumbers.filter((n) => n.id !== id)
-    toast.addToast({ message: 'Номер удалён', type: 'success' })
+    formData.internalNumbers = formData.internalNumbers.filter(n => n.id !== id)
     cacheStore.invalidate(instanceId)
+    toast.addToast({ message: 'Номер удалён', type: 'success' })
   } catch (error) {
     const message = axios.isAxiosError(error) && error.response?.data?.detail
       ? error.response.data.detail

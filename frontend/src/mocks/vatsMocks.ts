@@ -20,19 +20,23 @@ export const generateMockInstanceList = (count: number = 3): VatsInstanceFromAPI
 // Генерация списка SIP-пользователей для конкретного инстанса
 export const generateMockUsers = (instanceId: number, instanceName: string): SIPUserFromAPI[] => [
   {
-    id: 1,
-    username: '6001',
-    caller_id: 'User 6001',
-    account_code: '',
+    pk: 1,
+    id: '6001',
+    transport: 'udp',
     context: 'internal',
-    instance_name: instanceName,
+    allow: 'all',
+    disallow: 'none',
+    aors_fk: { pk: 1, id: '6001', reg_server: null, max_contacts: 1 },
+    auths_fk: { pk: 1, id: '6001', auth_type: 'userpass', username: '6001' }
   },
   {
-    id: 2,
-    username: '6002',
-    caller_id: 'User 6002',
-    account_code: '',
+    pk: 2,
+    id: '6002',
+    transport: 'udp',
     context: 'internal',
-    instance_name: instanceName,
-  },
+    allow: 'all',
+    disallow: 'none',
+    aors_fk: { pk: 2, id: '6002', reg_server: null, max_contacts: 1 },
+    auths_fk: { pk: 2, id: '6002', auth_type: 'userpass', username: '6002' }
+  }
 ]

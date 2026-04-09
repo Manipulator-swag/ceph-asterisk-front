@@ -22,22 +22,22 @@ export const vatsApi = {
 
   async getVatsUsers(instanceId: number): Promise<SIPUserFromAPI[]> {
     const response = await axiosInstance.get<SIPUserFromAPI[]>(
-      `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/users`
+      `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/users/`
     )
     return response.data
   },
 
   async createVatsUser(instanceId: number, userData: SIPUserCreateRequest): Promise<SIPUserFromAPI> {
     const response = await axiosInstance.post<SIPUserFromAPI>(
-      `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/users`,
+      `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/users/`,
       userData
     )
     return response.data
   },
 
-  async deleteVatsUser(instanceId: number, userId: string): Promise<void> {
+  async deleteVatsUser(instanceId: number, endpointId: string): Promise<void> {
     await axiosInstance.delete(
-      `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/users/${userId}`
+      `${API_CONFIG.ENDPOINTS.INSTANCES}${instanceId}/users/delete/${endpointId}`
     )
   },
 

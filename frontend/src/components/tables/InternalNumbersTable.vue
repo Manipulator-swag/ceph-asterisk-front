@@ -12,7 +12,6 @@
           <tr>
             <th>Номер</th>
             <th>Caller ID</th>
-            <th>Внешний номер</th>
             <th>Транспорт</th>
             <th class="text-right">Действия</th>
           </tr>
@@ -21,7 +20,6 @@
           <tr v-for="number in numbers" :key="number.id">
             <td>{{ number.number }}</td>
             <td>{{ number.callerId }}</td>
-            <td>{{ number.externalNumber || '—' }}</td>
             <td>
               <CustomBadge variant="outline">
                 {{ getTransportLabel(number.transportType) }}

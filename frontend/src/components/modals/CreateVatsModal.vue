@@ -322,9 +322,6 @@ watch(
   { deep: true }
 )
 
-// Очистка таймера при размонтировании (опционально)
-// onBeforeUnmount(() => { if (saveTimeout) clearTimeout(saveTimeout) })
-
 // Вспомогательные функции
 const closeModal = () => {
   if (abortController) {
