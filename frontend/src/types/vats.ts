@@ -36,6 +36,7 @@ export interface SIPUserCreateRequest {
   context?: string
   max_contacts?: number
   transport?: TransportType
+  callerid: string
 }
 
 export interface VatsTableItem {
@@ -79,6 +80,7 @@ export interface SIPUserFromAPI {
   context: string
   allow: string
   disallow: string
+  callerid: string
   aors_fk: AorSchema
   auths_fk: AuthSchema
 }

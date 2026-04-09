@@ -167,6 +167,10 @@
                     />
                   </div>
                   <div>
+                    <label for="new-callerid" class="label">Caller ID *</label>
+                    <CustomInput id="new-callerid" v-model="newNumber.callerId" placeholder="Иванов И.И." />
+                  </div>
+                  <div>
                     <label for="new-context" class="label">Тип номера</label>
                     <CustomSelect
                       id="new-context"
@@ -344,7 +348,7 @@ interface ExtendedVatsForm {
 interface NewNumberForm {
   number: string
   password: string
-  callerId: string       // пока не используется, но оставим для совместимости
+  callerId: string
   context: 'from-internal' | 'from-external'
   sipTransport: TransportType
 }
@@ -385,7 +389,7 @@ const mapApiUserToInternal = (user: SIPUserFromAPI): InternalNumber => {
   return {
     id: user.id,
     number: user.id,
-    callerId: user.auths_fk.username || user.id,
+    callerId: user.callerid,
     context: contextType,
     sipTransport: sipTransport,
   }
@@ -474,7 +478,7 @@ const cancelAddNumber = () => {
 // Добавление номера
 const addNumber = async () => {
   if (!newNumber.number || !newNumber.password) {
-    toast.addToast({ message: 'Заполните номер и пароль', type: 'warning' })
+    toast.addToast({ message: 'Заполните номер, пароль и Caller ID', type: 'warning' })
     return
   }
   if (!props.vatsData) return
@@ -489,6 +493,7 @@ const addNumber = async () => {
       password: newNumber.password,
       context: newNumber.context,
       transport: newNumber.sipTransport,
+      callerid: newNumber.callerId,
     }
     const createdUser = await vatsApi.createVatsUser(instanceId, createData)
     const newInternal = mapApiUserToInternal(createdUser)
