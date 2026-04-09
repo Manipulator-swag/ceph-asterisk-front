@@ -149,7 +149,7 @@
                       id="new-number"
                       name="new-number"
                       v-model="newNumber.number"
-                      placeholder="101"
+                      placeholder="107"
                       :with-icon="false"
                       :disabled="creatingNumber"
                     />
@@ -167,34 +167,12 @@
                     />
                   </div>
                   <div>
-                    <label for="new-callerid" class="label">Caller ID *</label>
-                    <CustomInput
-                      id="new-callerid"
-                      name="new-callerid"
-                      v-model="newNumber.callerId"
-                      placeholder="Иванов И.И."
-                      :with-icon="false"
-                      :disabled="creatingNumber"
-                    />
-                  </div>
-                  <div>
-                    <label for="new-external" class="label">Внешний номер</label>
-                    <CustomInput
-                      id="new-external"
-                      name="new-external"
-                      v-model="newNumber.externalNumber"
-                      placeholder="+79161234567"
-                      :with-icon="false"
-                      :disabled="creatingNumber"
-                    />
-                  </div>
-                  <div>
-                    <label for="new-transport" class="label">Тип транспорта</label>
+                    <label for="new-context" class="label">Тип номера</label>
                     <CustomSelect
-                      id="new-transport"
-                      name="new-transport"
-                      v-model="newNumber.transportType"
-                      :options="numberTransportOptions"
+                      id="new-context"
+                      name="new-context"
+                      v-model="newNumber.context"
+                      :options="contextOptions"
                       :disabled="creatingNumber"
                     />
                   </div>
@@ -223,15 +201,15 @@
                 </div>
               </div>
 
-              <InternalNumbersTable
-                :numbers="formData.internalNumbers"
-                :loading="loadingNumbers"
-                :deleting-number-id="deletingNumberId"
-                @delete="deleteNumber"
-              />
-            </div>
+            <InternalNumbersTable
+              :numbers="formData.internalNumbers"
+              :loading="loadingNumbers"
+              :deleting-number-id="deletingNumberId"
+              @delete="deleteNumber"
+            />
           </div>
-        </template>
+        </div>
+      </template>
 
         <template #commands>
           <div class="tab-content">
@@ -305,6 +283,7 @@ import type {
   VatsTableItem,
   InternalNumber,
   SIPUserCreateRequest,
+  SIPUserFromAPI,
   VatsInstanceFromAPI,
   TransportType
 } from '@/types/vats'
@@ -332,6 +311,11 @@ const sipTransportOptions = [
   { value: 'tls', label: 'TLS' },
 ]
 
+const contextOptions = [
+  { value: 'from-internal', label: 'Локальный' },
+  { value: 'from-external', label: 'Внешний' },
+]
+
 // Состояния
 const currentTab = ref('general')
 const isSaving = ref(false)
@@ -357,6 +341,14 @@ interface ExtendedVatsForm {
   internalNumbers: InternalNumber[]
 }
 
+interface NewNumberForm {
+  number: string
+  password: string
+  callerId: string       // пока не используется, но оставим для совместимости
+  context: 'from-internal' | 'from-external'
+  sipTransport: TransportType
+}
+
 const formData = reactive<ExtendedVatsForm>({
   name: '',
   sip_port: 5060,
@@ -380,19 +372,32 @@ const statusOptions = [
   { value: 'Отключена', label: 'Отключена' },
 ]
 
-const numberTransportOptions = [
-  { value: 'local', label: 'Локальный' },
-  { value: 'external', label: 'Внешний' },
-]
+const mapApiUserToInternal = (user: SIPUserFromAPI): InternalNumber => {
+  // Извлекаем SIP-транспорт (удаляем префикс "transport-")
+  let sipTransport: TransportType = 'udp'
+  if (user.transport === 'transport-tcp') sipTransport = 'tcp'
+  else if (user.transport === 'transport-tls') sipTransport = 'tls'
+  else sipTransport = 'udp'
+
+  // Определяем локальный/внешний тип из context
+  const contextType = user.context === 'from-internal' ? 'from-internal' : 'from-external'
+
+  return {
+    id: user.id,
+    number: user.id,
+    callerId: user.auths_fk.username || user.id,
+    context: contextType,
+    sipTransport: sipTransport,
+  }
+}
 
 // Новый номер
-const newNumber = reactive<Partial<InternalNumber> & { sipTransport: TransportType }>({
+const newNumber = reactive<NewNumberForm>({
   number: '',
   password: '',
   callerId: '',
-  externalNumber: '',
-  transportType: 'local',
-  sipTransport: 'udp', 
+  context: 'from-internal',
+  sipTransport: 'udp',
 })
 
 const tabs = [
@@ -427,27 +432,19 @@ const loadInstanceDetails = async () => {
 const loadInternalNumbers = async () => {
   if (!props.vatsData?.id) return
   const instanceId = Number(props.vatsData.id)
+
   const cached = cacheStore.getUsers(instanceId)
   if (cached) {
-    formData.internalNumbers = cached.map(user => ({
-      id: user.id,
-      number: user.id,
-      callerId: user.auths_fk.username || user.id,
-      transportType: 'local', // или вычислять из user.transport
-    }))
+    formData.internalNumbers = cached.map(mapApiUserToInternal)
     return
   }
+
   loadingNumbers.value = true
   numbersError.value = ''
   try {
     const users = await vatsApi.getVatsUsers(instanceId)
     cacheStore.setUsers(instanceId, users)
-    formData.internalNumbers = users.map(user => ({
-      id: user.id,
-      number: user.id,
-      callerId: user.auths_fk.username || user.id,
-      transportType: 'local',
-    }))
+    formData.internalNumbers = users.map(mapApiUserToInternal)
   } catch (error) {
     const message = axios.isAxiosError(error) && error.response?.data?.detail
       ? error.response.data.detail
@@ -464,8 +461,7 @@ const resetNewNumber = () => {
   newNumber.number = ''
   newNumber.password = ''
   newNumber.callerId = ''
-  newNumber.externalNumber = ''
-  newNumber.transportType = 'local'
+  newNumber.context = 'from-internal'
   newNumber.sipTransport = 'udp'
 }
 
@@ -477,8 +473,8 @@ const cancelAddNumber = () => {
 
 // Добавление номера
 const addNumber = async () => {
-  if (!newNumber.number || !newNumber.password || !newNumber.callerId) {
-    toast.addToast({ message: 'Заполните все обязательные поля', type: 'warning' })
+  if (!newNumber.number || !newNumber.password) {
+    toast.addToast({ message: 'Заполните номер и пароль', type: 'warning' })
     return
   }
   if (!props.vatsData) return
@@ -491,37 +487,32 @@ const addNumber = async () => {
     const createData: SIPUserCreateRequest = {
       username: newNumber.number,
       password: newNumber.password,
-      context: 'internal',
-      transport: newNumber.sipTransport, // если выбран SIP-транспорт
+      context: newNumber.context,
+      transport: newNumber.sipTransport,
     }
     const createdUser = await vatsApi.createVatsUser(instanceId, createData)
-    const internalNumber: InternalNumber = {
-      id: createdUser.id,
-      number: createdUser.id,
-      callerId: createdUser.auths_fk.username || createdUser.id,
-      transportType: 'local',
-    }
-    formData.internalNumbers.push(internalNumber)
-    resetNewNumber()
-    showAddNumber.value = false
-    toast.addToast({ message: 'Номер успешно добавлен', type: 'success' })
+    const newInternal = mapApiUserToInternal(createdUser)
+    formData.internalNumbers.push(newInternal)
     cacheStore.invalidate(instanceId)
+    cancelAddNumber()
+    toast.addToast({ message: 'Номер успешно добавлен', type: 'success' })
   } catch (error) {
     const message = axios.isAxiosError(error) && error.response?.data?.detail
       ? error.response.data.detail
-      : (error instanceof Error ? error.message : 'Ошибка загрузки')
-    toast.addToast({ message, type: 'error' })
+      : (error instanceof Error ? error.message : 'Ошибка создания')
     numbersError.value = message
+    toast.addToast({ message, type: 'error' })
   } finally {
     creatingNumber.value = false
   }
 }
-
 // Удаление номера
 const deleteNumber = async (id: string) => {
   if (!props.vatsData) return
-  if (!confirm('Удалить номер?')) return
+  if (!confirm('Вы уверены, что хотите удалить этот внутренний номер?')) return
+
   deletingNumberId.value = id
+  numbersError.value = ''
   try {
     const instanceId = Number(props.vatsData.id)
     await vatsApi.deleteVatsUser(instanceId, id)
@@ -531,14 +522,13 @@ const deleteNumber = async (id: string) => {
   } catch (error) {
     const message = axios.isAxiosError(error) && error.response?.data?.detail
       ? error.response.data.detail
-      : (error instanceof Error ? error.message : 'Ошибка загрузки')
-    toast.addToast({ message, type: 'error' })
+      : (error instanceof Error ? error.message : 'Ошибка удаления')
     numbersError.value = message
+    toast.addToast({ message, type: 'error' })
   } finally {
     deletingNumberId.value = null
   }
 }
-
 // Открытие модалки
 watch(
   () => props.show,

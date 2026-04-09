@@ -11,9 +11,9 @@ export interface InternalNumber {
   id: string
   number: string
   password?: string
-  callerId: string 
-  externalNumber?: string
-  transportType: 'local' | 'external'
+  callerId: string
+  context: 'from-internal' | 'from-external'
+  sipTransport: TransportType
 }
 
 export interface AorSchema {

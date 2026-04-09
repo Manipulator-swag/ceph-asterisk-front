@@ -1,50 +1,42 @@
 <template>
   <div class="internal-numbers-table">
-    <!-- Таблица внутренних номеров -->
     <div class="overflow-x-auto">
-      <div v-if="loading" class="loading-state">
-        <div class="spinner"></div>
-        <p>Загрузка номеров...</p>
-      </div>
+      <div v-if="loading" class="loading-state">...</div>
       <template v-else>
         <table class="table">
           <thead>
-          <tr>
-            <th>Номер</th>
-            <th>Caller ID</th>
-            <th>Транспорт</th>
-            <th class="text-right">Действия</th>
-          </tr>
+            <tr>
+              <th>Номер</th>
+              <th>Caller ID</th>
+              <th>Тип номера</th>
+              <th>SIP-транспорт</th>
+              <th class="text-right">Действия</th>
+            </tr>
           </thead>
           <tbody>
-          <tr v-for="number in numbers" :key="number.id">
-            <td>{{ number.number }}</td>
-            <td>{{ number.callerId }}</td>
-            <td>
-              <CustomBadge variant="outline">
-                {{ getTransportLabel(number.transportType) }}
-              </CustomBadge>
-            </td>
-            <td class="text-right">
-              <CustomButton
-                variant="outline"
-                size="sm"
-                @click="handleDelete(number.id)"
-                :disabled="deletingNumberId === number.id"
-              >
-                  <span v-if="deletingNumberId === number.id" class="button-loading">
-                    <span class="spinner"></span>
-                  </span>
-                <span v-else>Удалить</span>
-              </CustomButton>
-            </td>
-          </tr>
+            <tr v-for="number in numbers" :key="number.id">
+              <td>{{ number.number }}</td>
+              <td>{{ number.callerId }}</td>
+              <td>
+                <CustomBadge variant="outline">
+                  {{ number.context === 'from-internal' ? 'Локальный' : 'Внешний' }}
+                </CustomBadge>
+              </td>
+              <td>
+                <CustomBadge variant="outline">
+                  {{ number.sipTransport?.toUpperCase() }}
+                </CustomBadge>
+              </td>
+              <td class="text-right">
+                <CustomButton variant="outline" size="sm" @click="handleDelete(number.id)" :disabled="deletingNumberId === number.id">
+                  <span v-if="deletingNumberId === number.id" class="button-loading"><span class="spinner"></span></span>
+                  <span v-else>Удалить</span>
+                </CustomButton>
+              </td>
+            </tr>
           </tbody>
         </table>
-
-        <div v-if="numbers.length === 0" class="text-center py-8 text-gray-500">
-          Нет добавленных внутренних номеров
-        </div>
+        <div v-if="numbers.length === 0" class="text-center py-8 text-gray-500">Нет добавленных внутренних номеров</div>
       </template>
     </div>
   </div>
@@ -60,23 +52,12 @@ interface Props {
   loading: boolean
   deletingNumberId?: string | null
 }
-
 interface Emits {
   (e: 'delete', id: string): void
 }
-
-const { numbers = [], loading = false, deletingNumberId = null } = defineProps<Props>()
-
+defineProps<Props>()
 const emit = defineEmits<Emits>()
-
-// Добавляем вспомогательную функцию, которая использует props
-const getTransportLabel = (transportType: string) => {
-  return transportType === 'local' ? 'Локальный' : 'Внешний'
-}
-
-const handleDelete = (id: string) => {
-  emit('delete', id)
-}
+const handleDelete = (id: string) => emit('delete', id)
 </script>
 
 <style scoped>

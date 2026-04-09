@@ -22,21 +22,21 @@ export const generateMockUsers = (instanceId: number, instanceName: string): SIP
   {
     pk: 1,
     id: '6001',
-    transport: 'udp',
-    context: 'internal',
-    allow: 'all',
-    disallow: 'none',
-    aors_fk: { pk: 1, id: '6001', reg_server: null, max_contacts: 1 },
-    auths_fk: { pk: 1, id: '6001', auth_type: 'userpass', username: '6001' }
+    transport: 'transport-udp',
+    context: 'from-internal',
+    allow: 'ulaw,alaw',
+    disallow: 'all',
+    aors_fk: { pk: 1, id: '6001-aor', reg_server: null, max_contacts: 1 },
+    auths_fk: { pk: 1, id: '6001-auth', auth_type: 'userpass', username: '6001' },
   },
   {
     pk: 2,
     id: '6002',
-    transport: 'udp',
-    context: 'internal',
-    allow: 'all',
-    disallow: 'none',
-    aors_fk: { pk: 2, id: '6002', reg_server: null, max_contacts: 1 },
-    auths_fk: { pk: 2, id: '6002', auth_type: 'userpass', username: '6002' }
-  }
+    transport: 'transport-udp',
+    context: 'from-internal',
+    allow: 'ulaw,alaw',
+    disallow: 'all',
+    aors_fk: { pk: 2, id: '6002-aor', reg_server: null, max_contacts: 1 },
+    auths_fk: { pk: 2, id: '6002-auth', auth_type: 'userpass', username: '6002' },
+  },
 ]

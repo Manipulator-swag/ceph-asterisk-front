@@ -14,22 +14,14 @@ export const useVatsCacheStore = defineStore('vatsCache', {
   actions: {
     getUsers(instanceId: number): SIPUserFromAPI[] | null {
       const entry = this.usersCache[instanceId]
-      if (entry && (Date.now() - entry.timestamp) < this.ttl) {
-        return entry.users
-      }
+      if (entry && Date.now() - entry.timestamp < this.ttl) return entry.users
       return null
     },
     setUsers(instanceId: number, users: SIPUserFromAPI[]) {
-      this.usersCache[instanceId] = {
-        users,
-        timestamp: Date.now(),
-      }
+      this.usersCache[instanceId] = { users, timestamp: Date.now() }
     },
     invalidate(instanceId: number) {
       delete this.usersCache[instanceId]
     },
-    clearAll() {
-      this.usersCache = {}
-    }
-  }
+  },
 })
