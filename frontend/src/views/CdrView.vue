@@ -105,7 +105,7 @@ const loadAllCDRData = async () => {
   }
 }
 
-watch(searchQuery, (newVal) => {
+watch(searchQuery, () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
     currentPage.value = 1
@@ -254,7 +254,6 @@ onUnmounted(() => {
           label="Поиск по номеру"
           placeholder="Введите номер..."
           :with-icon="false"
-          :disabled="isLoading"
         />
       </div>
       <div class="filter-item">
@@ -263,7 +262,6 @@ onUnmounted(() => {
           label="Статус"
           placeholder="Все статусы"
           :options="statusOptions"
-          :disabled="isLoading"
         />
       </div>
       <div class="filter-item">
@@ -273,7 +271,6 @@ onUnmounted(() => {
           label="Дата"
           type="date"
           :with-icon="false"
-          :disabled="isLoading"
         />
       </div>
     </div>
