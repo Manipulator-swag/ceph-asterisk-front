@@ -2,13 +2,14 @@ import MockAdapter from 'axios-mock-adapter'
 import type { AxiosInstance } from 'axios'
 import { generateMockCDR } from '@/mocks/cdrMocks'
 import { generateMockInstance, generateMockInstanceList, generateMockUsers } from '@/mocks/vatsMocks'
+import { getMockAudioFiles, addMockAudioFile, deleteMockAudioFile, getMockAudioFileBlob } from '@/mocks/audioMocks'
 import { API_CONFIG } from '@/config/api'
 
 export const setupMocks = (axiosInstance: AxiosInstance) => {
   const mock = new MockAdapter(axiosInstance, { delayResponse: 300 })
 
   // CDR
-   mock.onGet(API_CONFIG.ENDPOINTS.CDR).reply((config) => {
+  mock.onGet(API_CONFIG.ENDPOINTS.CDR).reply((config) => {
     const limit = Number(config.params?.limit) || 100
     const offset = Number(config.params?.offset) || 0
     const allData = generateMockCDR(1000)
@@ -47,6 +48,44 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   })
 
   mock.onGet(new RegExp(`${API_CONFIG.ENDPOINTS.INSTANCES}get_contexts/[^/]+$`)).reply(() => {
-    return [200, ['from-internal', 'from-external', 'custom-context']]
+      return [200, ['from-internal', 'from-external', 'custom-context']]
+    })
+    mock.onGet('/audio_files/get_files').reply(() => {
+    return [200, getMockAudioFiles()]
+  })
+
+  // POST /audio_files/upload_audio
+  mock.onPost('/audio_files/upload_audio').reply(async (config) => {
+    const formData = await (config.data as FormData)
+    const file = formData.get('file') as File
+    if (!file) return [400, { detail: 'No file provided' }]
+    const newFile = addMockAudioFile(file)
+    return [200, newFile]
+  })
+
+  // DELETE /audio_files/delete_file/{file_id}
+  mock.onDelete(/\/audio_files\/delete_file\/\d+/).reply((config) => {
+    const match = config.url?.match(/\/delete_file\/(\d+)/)
+    if (match && match[1]) {
+      const fileId = parseInt(match[1], 10)
+      const success = deleteMockAudioFile(fileId)
+      if (success) return [200, {}]
+      return [404, { detail: 'File not found' }]
+    }
+    return [400, { detail: 'Invalid request' }]
+  })
+
+  // GET /audio_files/get_file/{file_id}
+  mock.onGet(/\/audio_files\/get_file\/\d+/).reply((config) => {
+    const match = config.url?.match(/\/get_file\/(\d+)/)
+    if (match && match[1]) {
+      const fileId = parseInt(match[1], 10)
+      const blob = getMockAudioFileBlob(fileId)
+      if (blob) {
+        return [200, blob, { 'Content-Type': 'audio/wav' }]
+      }
+      return [404, { detail: 'File not found' }]
+    }
+    return [400, { detail: 'Invalid request' }]
   })
 }
