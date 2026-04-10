@@ -22,6 +22,9 @@ const selectedCall = ref<CallRecord | null>(null)
 const totalItems = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
+const srcFilter = ref('')
+const dstFilter = ref('')
+
 let searchDebounceTimer: number | null = null
 
 interface CDRQueryParams {
@@ -40,8 +43,10 @@ const openCallDetails = (call: CallRecord) => {
 }
 
 const hasActiveFilters = computed(() => {
-  const query = searchQuery.value ?? ''
-  return query.trim() !== '' || selectedStatus.value !== 'all' || (selectedDate.value ?? '') !== ''
+  return (srcFilter.value ?? '').trim() !== '' || 
+         (dstFilter.value ?? '').trim() !== '' || 
+         selectedStatus.value !== 'all' || 
+         (selectedDate.value ?? '') !== ''
 })
 
 const callsData = computed(() => {
@@ -72,13 +77,12 @@ const loadAllCDRData = async () => {
     offset: (currentPage.value - 1) * pageSize.value,
   }
 
-  //фильтры
-  const search = searchQuery.value ?? ''
-  const trimmedSearch = search.trim()
-  if (trimmedSearch) {
-    params.src = trimmedSearch
-    params.dst = trimmedSearch
-  }
+  const trimmedSrc = (srcFilter.value ?? '').trim()
+  const trimmedDst = (dstFilter.value ?? '').trim()
+  
+  if (trimmedSrc) params.src = trimmedSrc
+  if (trimmedDst) params.dst = trimmedDst
+  
   if (selectedStatus.value !== 'all') {
     params.disposition = selectedStatus.value
   }
@@ -105,21 +109,22 @@ const loadAllCDRData = async () => {
   }
 }
 
-watch(searchQuery, () => {
+const resetFilters = () => {
+  srcFilter.value = ''
+  dstFilter.value = ''
+  selectedStatus.value = 'all'
+  selectedDate.value = ''
+  currentPage.value = 1
+  loadAllCDRData()
+}
+
+watch([srcFilter, dstFilter], () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
     currentPage.value = 1
     loadAllCDRData()
   }, 500)
 })
-
-const resetFilters = () => {
-  searchQuery.value = ''
-  selectedStatus.value = 'all'
-  selectedDate.value = ''
-  currentPage.value = 1
-  loadAllCDRData()
-}
 
 watch(selectedStatus, () => {
   currentPage.value = 1
@@ -250,9 +255,17 @@ onUnmounted(() => {
     <div class="search-filters">
       <div class="filter-item">
         <CustomInput
-          v-model="searchQuery"
-          label="Поиск по номеру"
-          placeholder="Введите номер..."
+          v-model="srcFilter"
+          label="Номер источника"
+          placeholder="Введите src..."
+          :with-icon="false"
+        />
+      </div>
+      <div class="filter-item">
+        <CustomInput
+          v-model="dstFilter"
+          label="Номер назначения"
+          placeholder="Введите dst..."
           :with-icon="false"
         />
       </div>
