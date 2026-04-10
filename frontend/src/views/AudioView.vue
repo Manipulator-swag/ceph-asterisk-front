@@ -1,206 +1,156 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 import CustomButton from '@/components/UI/CustomButton.vue'
 import PageHeader from '@/components/UI/PageHeader.vue'
 import AudioFilesTable from '@/components/tables/AudioFilesTable.vue'
+import { audioApi } from '@/api/audioApi'
+import type { AudioFileSchema, AudioFileDisplay } from '@/types/audio'
+import { useToastStore } from '@/stores/toast'
+import AudioPlayerModal from '@/components/modals/AudioPlayerModal.vue'
 
-// Тип для аудиофайла
-interface AudioFile {
-  name: string
-  format: string
-  size: string
-  duration: string
-  usage: string
-  vats: string
-  uploadDate: string
+const toast = useToastStore()
+const audioFiles = ref<AudioFileDisplay[]>([])
+const isLoading = ref(false)
+const errorMessage = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
+const isUploading = ref(false)
+const showPlayer = ref(false)
+const currentFileId = ref<number | null>(null)
+const currentFileName = ref('')
+
+// Вспомогательные функции форматирования
+const formatFileSize = (sizeKb: number): string => {
+  if (sizeKb < 1024) return `${sizeKb} KB`
+  const mb = sizeKb / 1024
+  return `${mb.toFixed(1)} MB`
 }
 
-const audioFiles = ref<AudioFile[]>([
-  {
-    name: 'welcome_greeting.wav',
-    format: 'WAV (16-bit PCM, 8kHz)',
-    size: '239.3 KB',
-    duration: '15s',
-    usage: 'IVR',
-    vats: 'Головной офис',
-    uploadDate: '20.10.2025, 10:00',
-  },
-  {
-    name: 'hold_music.gsm',
-    format: 'GSM',
-    size: '175.8 KB',
-    duration: '120s',
-    usage: 'МОН',
-    vats: 'Головной офис',
-    uploadDate: '21.10.2025, 14:30',
-  },
-  {
-    name: 'ivr_menu.wav',
-    format: 'WAV (16-bit PCM, 8kHz)',
-    size: '312.5 KB',
-    duration: '20s',
-    usage: 'IVR',
-    vats: 'Филиал Москва',
-    uploadDate: '22.10.2025, 09:15',
-  },
-  {
-    name: 'voicemail_intro.wav',
-    format: 'WAV (16-bit PCM, 8kHz)',
-    size: '125.0 KB',
-    duration: '8s',
-    usage: 'Голосовая почта',
-    vats: 'Головной офис',
-    uploadDate: '23.10.2025, 11:00',
-  },
-])
+const formatDuration = (seconds: number): string => {
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${minutes} мин ${secs}с`
+}
 
-const fileInput = ref<HTMLInputElement | null>(null)
+const formatDate = (dateStr: string): string => {
+  const [year, month, day] = dateStr.split('-')
+  return `${day}.${month}.${year}`
+}
 
-const openFileDialog = () => {
-  if (fileInput.value) {
-    fileInput.value.click()
+// Преобразование API-данных в формат для таблицы
+const mapApiToDisplay = (files: AudioFileSchema[]): AudioFileDisplay[] => {
+  return files.map(file => ({
+    id: file.id,
+    name: file.name,
+    format: file.format,
+    size: formatFileSize(file.size_kb),
+    duration: formatDuration(file.duration_sec),
+    uploadDate: formatDate(file.create_date),
+  }))
+}
+
+// Загрузка списка файлов
+const loadAudioFiles = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+  try {
+    const files = await audioApi.getFiles()
+    audioFiles.value = mapApiToDisplay(files)
+  } catch (error: unknown) {
+    console.error('Ошибка загрузки аудиофайлов:', error)
+    let message = 'Не удалось загрузить аудиофайлы'
+    if (axios.isAxiosError(error)) {
+      message = error.response?.data?.detail || message
+    } else if (error instanceof Error) {
+      message = error.message
+    }
+    errorMessage.value = message
+    toast.addToast({ message, type: 'error' })
+  } finally {
+    isLoading.value = false
   }
 }
 
-const handleUploadFile = (event: Event) => {
+// Открыть диалог выбора файла
+const openFileDialog = () => fileInput.value?.click()
+
+// Обработка выбора файла
+const handleUploadFile = async (event: Event) => {
   const input = event.target as HTMLInputElement
   const files = input.files
-
-  if (!files || files.length === 0) {
-    return
-  }
+  if (!files || files.length === 0) return
   const file = files[0]
-  if (!file.type.startsWith('audio/')) {
-    alert('Пожалуйста, выберите аудиофайл')
+  if (!file) return
+
+  const allowedMimeTypes = ['audio/wav', 'audio/x-wav']
+  const extension = file.name.split('.').pop()?.toLowerCase()
+  const isValid = allowedMimeTypes.includes(file.type) || (extension === 'wav')
+
+  if (!isValid) {
+    toast.addToast({ message: 'Можно загружать только файлы в формате WAV', type: 'warning' })
+    input.value = ''
     return
   }
-  processAudioFile(file)
-  input.value = ''
-}
 
-const processAudioFile = (file: File) => {
-  const fileName = file.name
-  const fileSize = formatFileSize(file.size)
-  const fileFormat = getFileFormat(file.name, file.type)
-  const uploadDate = new Date().toLocaleString('ru-RU', {
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-
-  // Создаем временный объект для новой записи
-  const newFile: AudioFile = {
-    name: fileName,
-    format: fileFormat,
-    size: fileSize,
-    duration: '0s', // По умолчанию, будет обновлено после получения длительности
-    usage: 'IVR', // Значение по умолчанию
-    vats: 'Головной офис', // Значение по умолчанию
-    uploadDate: uploadDate,
-  }
-
-  // Добавляем файл в таблицу (пока без длительности)
-  audioFiles.value.unshift(newFile)
-
-  // Получаем длительность аудиофайла
-  getAudioDuration(file)
-    .then((duration) => {
-      // Обновляем длительность в добавленном файле
-      const addedFile = audioFiles.value.find((f) => f.name === fileName)
-      if (addedFile) {
-        addedFile.duration = `${Math.round(duration)}s`
-      }
-    })
-    .catch((error) => {
-      console.error('Ошибка при получении длительности:', error)
-      // Если не удалось получить длительность, оставляем "0s"
-    })
-}
-
-// Функция для получения длительности аудиофайла
-const getAudioDuration = (file: File): Promise<number> => {
-  return new Promise((resolve, reject) => {
-    const audio = new Audio()
-    const objectUrl = URL.createObjectURL(file)
-
-    audio.src = objectUrl
-
-    audio.onloadedmetadata = () => {
-      URL.revokeObjectURL(objectUrl)
-      resolve(audio.duration)
+  isUploading.value = true
+  try {
+    await audioApi.uploadFile(file)
+    await loadAudioFiles()
+    toast.addToast({ message: `Файл "${file.name}" успешно загружен`, type: 'success' })
+  } catch (error: unknown) {
+    console.error('Ошибка загрузки файла:', error)
+    let message = 'Ошибка при загрузке файла'
+    if (axios.isAxiosError(error)) {
+      message = error.response?.data?.detail || message
+    } else if (error instanceof Error) {
+      message = error.message
     }
+    toast.addToast({ message, type: 'error' })
+  } finally {
+    isUploading.value = false
+    input.value = ''
+  }
+}
 
-    audio.onerror = () => {
-      URL.revokeObjectURL(objectUrl)
-      reject(new Error('Не удалось загрузить аудиофайл'))
+// Удаление файла
+const handleDeleteFile = async (file: AudioFileDisplay) => {
+  if (!confirm(`Вы уверены, что хотите удалить файл "${file.name}"?`)) return
+  try {
+    await audioApi.deleteFile(file.id)
+    await loadAudioFiles()
+    toast.addToast({ message: `Файл "${file.name}" удалён`, type: 'success' })
+  } catch (error: unknown) {
+    console.error('Ошибка удаления:', error)
+    let message = 'Ошибка при удалении файла'
+    if (axios.isAxiosError(error)) {
+      message = error.response?.data?.detail || message
+    } else if (error instanceof Error) {
+      message = error.message
     }
-  })
-}
-
-// Функция для форматирования размера файла
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
-}
-
-// Функция для определения формата файла
-const getFileFormat = (fileName: string, mimeType: string): string => {
-  const extension = fileName.split('.').pop()?.toUpperCase() || 'Unknown'
-
-  // Сопоставляем MIME-типы и расширения с читаемыми форматами
-  const formatMap: { [key: string]: string } = {
-    'audio/wav': 'WAV (16-bit PCM, 8kHz)',
-    'audio/x-wav': 'WAV (16-bit PCM, 8kHz)',
-    'audio/mpeg': 'MP3',
-    'audio/mp3': 'MP3',
-    'audio/ogg': 'OGG Vorbis',
-    'audio/flac': 'FLAC',
-    'audio/aac': 'AAC',
-    'audio/x-ms-wma': 'WMA',
-  }
-
-  // Сопоставление по расширению
-  const extensionMap: { [key: string]: string } = {
-    WAV: 'WAV (16-bit PCM, 8kHz)',
-    MP3: 'MP3',
-    OGG: 'OGG Vorbis',
-    FLAC: 'FLAC',
-    AAC: 'AAC',
-    M4A: 'AAC',
-    WMA: 'WMA',
-    GSM: 'GSM',
-  }
-
-  // Сначала пытаемся определить по MIME-типу, затем по расширению
-  return formatMap[mimeType] || extensionMap[extension] || `${extension} файл`
-}
-
-const handlePlayFile = (file: AudioFile) => {
-  console.log('Прослушивание файла:', file.name)
-  // Логика проигрывания файла
-}
-
-const handleDeleteFile = (file: AudioFile) => {
-  console.log('Удаление файла:', file.name)
-  if (confirm(`Вы уверены, что хотите удалить файл "${file.name}"?`)) {
-    audioFiles.value = audioFiles.value.filter((f) => f.name !== file.name)
+    toast.addToast({ message, type: 'error' })
   }
 }
+
+// Воспроизведение (можно реализовать позже)
+const handlePlayFile = (file: AudioFileDisplay) => {
+  currentFileId.value = file.id
+  currentFileName.value = file.name
+  showPlayer.value = true
+}
+
+onMounted(() => {
+  loadAudioFiles()
+})
 </script>
 
 <template>
   <div class="wrapper">
     <PageHeader title="Библиотека аудиофайлов" subtitle="Все ВАТС">
       <template #actions>
-        <CustomButton @click="openFileDialog">+ Загрузить файл</CustomButton>
-        <!-- Скрытый input для выбора файла -->
+        <CustomButton @click="openFileDialog" :disabled="isUploading">
+          {{ isUploading ? 'Загрузка...' : '+ Загрузить файл' }}
+        </CustomButton>
         <input
           ref="fileInput"
           type="file"
@@ -211,13 +161,37 @@ const handleDeleteFile = (file: AudioFile) => {
       </template>
     </PageHeader>
 
+    <div v-if="errorMessage" class="error-message">
+      <div class="error-content">
+        <span class="error-icon">⚠</span>
+        <span>{{ errorMessage }}</span>
+      </div>
+      <button @click="errorMessage = ''" class="error-close">×</button>
+    </div>
+
     <main class="content">
+      <div v-if="isLoading" class="loading-state">
+        <div class="spinner large"></div>
+        <p>Загрузка аудиофайлов...</p>
+      </div>
+      <div v-else-if="audioFiles.length === 0" class="empty-state">
+        <p>Нет загруженных аудиофайлов</p>
+        <CustomButton @click="openFileDialog">Загрузить первый файл</CustomButton>
+      </div>
       <AudioFilesTable
+        v-else
         :audio-files="audioFiles"
         @play="handlePlayFile"
         @delete="handleDeleteFile"
       />
     </main>
+
+    <AudioPlayerModal
+      :show="showPlayer"
+      :file-id="currentFileId"
+      :file-name="currentFileName"
+      @close="showPlayer = false"
+    />
   </div>
 </template>
 
@@ -235,6 +209,42 @@ const handleDeleteFile = (file: AudioFile) => {
   padding: var(--spacing-md);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--color-border);
+}
+
+.error-message {
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: var(--vt-c-orange);
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  animation: slideIn 0.3s ease;
+}
+
+.error-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.error-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.error-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+  line-height: 1;
 }
 
 /* Адаптивность */

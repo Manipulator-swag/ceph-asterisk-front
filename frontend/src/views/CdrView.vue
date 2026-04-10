@@ -7,7 +7,7 @@ import CDRTable from '@/components/tables/CDRTable.vue'
 import PageHeader from '@/components/UI/PageHeader.vue'
 import CallDetailsModal from '@/components/modals/CallDetailsModal.vue'
 import axios from 'axios'
-import type { CallRecord, CDRRecord } from '@/types/cdr'
+import type { CallRecord, CDRRecord, CDRQueryParams } from '@/types/cdr'
 import { cdrApi } from '@/api/cdrApi'
 
 // Состояния
@@ -26,16 +26,6 @@ const srcFilter = ref('')
 const dstFilter = ref('')
 
 let searchDebounceTimer: number | null = null
-
-interface CDRQueryParams {
-  limit: number
-  offset: number
-  src?: string
-  dst?: string
-  disposition?: string
-  date_from?: string
-  date_to?: string
-}
 
 const openCallDetails = (call: CallRecord) => {
   selectedCall.value = call

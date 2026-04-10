@@ -47,3 +47,13 @@ export interface CDRResponse {
   limit: number
   offset: number
 }
+
+export interface CDRQueryParams {
+  limit: number
+  offset: number
+  src?: string
+  dst?: string
+  disposition?: string
+  date_from?: string
+  date_to?: string
+}
