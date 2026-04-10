@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CustomButton from '@/components/UI/CustomButton.vue'
 import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomSelect from '@/components/UI/CustomSelect.vue'
@@ -17,18 +17,49 @@ const selectedDate = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
 const cdrData = ref<CDRRecord[]>([])
-const allCdrData = ref<CDRRecord[]>([])
-const searchDebounce = ref<number | null>(null) 
 const showCallDetails = ref(false)
 const selectedCall = ref<CallRecord | null>(null)
+const totalItems = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(20)
+const srcFilter = ref('')
+const dstFilter = ref('')
+
+let searchDebounceTimer: number | null = null
+
+interface CDRQueryParams {
+  limit: number
+  offset: number
+  src?: string
+  dst?: string
+  disposition?: string
+  date_from?: string
+  date_to?: string
+}
 
 const openCallDetails = (call: CallRecord) => {
   selectedCall.value = call
   showCallDetails.value = true
 }
+
 const hasActiveFilters = computed(() => {
-  return searchQuery.value.trim() !== '' || selectedStatus.value !== 'all' || selectedDate.value !== ''
+  return (srcFilter.value ?? '').trim() !== '' || 
+         (dstFilter.value ?? '').trim() !== '' || 
+         selectedStatus.value !== 'all' || 
+         (selectedDate.value ?? '') !== ''
 })
+
+const callsData = computed(() => {
+  return cdrData.value.map(transformCDRToCallRecord)
+})
+
+const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
+
+const goToPage = (page: number) => {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  loadAllCDRData()
+}
 
 const statusOptions = [
   { value: 'all', label: 'Все' },
@@ -41,11 +72,29 @@ const statusOptions = [
 const loadAllCDRData = async () => {
   isLoading.value = true
   errorMessage.value = ''
+  const params: CDRQueryParams = {
+    limit: pageSize.value,
+    offset: (currentPage.value - 1) * pageSize.value,
+  }
+
+  const trimmedSrc = (srcFilter.value ?? '').trim()
+  const trimmedDst = (dstFilter.value ?? '').trim()
+  
+  if (trimmedSrc) params.src = trimmedSrc
+  if (trimmedDst) params.dst = trimmedDst
+  
+  if (selectedStatus.value !== 'all') {
+    params.disposition = selectedStatus.value
+  }
+  if (selectedDate.value) {
+    params.date_from = `${selectedDate.value}T00:00:00`
+    params.date_to = `${selectedDate.value}T23:59:59`
+  }
 
   try {
-    const response = await cdrApi.getCDR(1000)
-    allCdrData.value = Array.isArray(response) ? response : []
-    applyAllFilters()
+    const response = await cdrApi.getCDR(params)
+    cdrData.value = response.items
+    totalItems.value = response.total
   } catch (error: unknown) {
     console.error('Ошибка при загрузке CDR:', error)
     if (axios.isAxiosError(error)) {
@@ -60,74 +109,32 @@ const loadAllCDRData = async () => {
   }
 }
 
-const filterDataByNumber = (data: CDRRecord[], query: string): CDRRecord[] => {
-  if (!query.trim()) return data
-
-  const searchLower = query.trim().toLowerCase()
-  return data.filter(
-    (record) =>
-      record.src.toLowerCase().includes(searchLower) ||
-      record.dst.toLowerCase().includes(searchLower),
-  )
+const resetFilters = () => {
+  srcFilter.value = ''
+  dstFilter.value = ''
+  selectedStatus.value = 'all'
+  selectedDate.value = ''
+  currentPage.value = 1
+  loadAllCDRData()
 }
 
-const filterDataByStatus = (data: CDRRecord[], status: string): CDRRecord[] => {
-  if (status === 'all') return data
+watch([srcFilter, dstFilter], () => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadAllCDRData()
+  }, 500)
+})
 
-  return data.filter((record) => record.disposition === status)
-}
+watch(selectedStatus, () => {
+  currentPage.value = 1
+  loadAllCDRData()
+})
 
-const filterDataByDate = (data: CDRRecord[], date: string): CDRRecord[] => {
-  if (!date) return data
-  const targetDate = new Date(date)
-  const targetYear = targetDate.getFullYear()
-  const targetMonth = targetDate.getMonth()
-  const targetDay = targetDate.getDate()
-
-  return data.filter((record) => {
-    const recordDate = new Date(record.answer)
-    return recordDate.getFullYear() === targetYear &&
-           recordDate.getMonth() === targetMonth &&
-           recordDate.getDate() === targetDay
-  })
-}
-
-const applyAllFilters = () => {
-  let filteredData = Array.isArray(allCdrData.value) ? [...allCdrData.value] : []
-
-  if (searchQuery.value.trim()) {
-    filteredData = filterDataByNumber(filteredData, searchQuery.value)
-  }
-  if (selectedStatus.value !== 'all') {
-    filteredData = filterDataByStatus(filteredData, selectedStatus.value)
-  }
-  if (selectedDate.value) {
-    filteredData = filterDataByDate(filteredData, selectedDate.value)
-  }
-  cdrData.value = filteredData
-}
-
-const handleSearchInput = (value: string | number | undefined) => {
-  searchQuery.value = value !== undefined ? String(value) : ''
-
-  if (searchDebounce.value) {
-    clearTimeout(searchDebounce.value)
-  }
-
-  searchDebounce.value = setTimeout(() => {
-    applyAllFilters()
-  }, 300)
-}
-
-const handleStatusChange = (value: string | number | undefined) => {
-  selectedStatus.value = value !== undefined ? String(value) : 'all'
-  applyAllFilters()
-}
-
-const handleDateChange = (value: string | number | undefined) => {
-  selectedDate.value = value !== undefined ? String(value) : ''
-  applyAllFilters()
-}
+watch(selectedDate, () => {
+  currentPage.value = 1
+  loadAllCDRData()
+})
 
 const transformCDRToCallRecord = (cdr: CDRRecord): CallRecord => {
   const formatDateTime = (isoString: string): string => {
@@ -157,17 +164,6 @@ const transformCDRToCallRecord = (cdr: CDRRecord): CallRecord => {
     status: statusMap[cdr.disposition] || cdr.disposition,
     vats: cdr.instance_name,
   }
-}
-
-const callsData = computed(() => {
-  return cdrData.value.map(transformCDRToCallRecord)
-})
-
-const resetFilters = () => {
-  searchQuery.value = ''
-  selectedStatus.value = 'all'
-  selectedDate.value = ''
-  cdrData.value = [...allCdrData.value]
 }
 
 const exportToJson = () => {
@@ -216,9 +212,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (searchDebounce.value) {
-    clearTimeout(searchDebounce.value)
-  }
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
 })
 </script>
 
@@ -261,40 +255,42 @@ onUnmounted(() => {
     <div class="search-filters">
       <div class="filter-item">
         <CustomInput
-          :modelValue="searchQuery"
-          @update:modelValue="handleSearchInput"
-          label="Поиск по номеру"
-          placeholder="Введите номер..."
+          v-model="srcFilter"
+          label="Номер источника"
+          placeholder="Введите src..."
           :with-icon="false"
-          :disabled="isLoading"
+        />
+      </div>
+      <div class="filter-item">
+        <CustomInput
+          v-model="dstFilter"
+          label="Номер назначения"
+          placeholder="Введите dst..."
+          :with-icon="false"
         />
       </div>
       <div class="filter-item">
         <CustomSelect
-          :modelValue="selectedStatus"
-          @update:modelValue="handleStatusChange"
+          v-model="selectedStatus"
           label="Статус"
           placeholder="Все статусы"
           :options="statusOptions"
-          :disabled="isLoading"
         />
       </div>
       <div class="filter-item">
         <CustomInput
           class="custom-input--date"
-          :modelValue="selectedDate"
-          @update:modelValue="handleDateChange"
+          v-model="selectedDate"
           label="Дата"
           type="date"
           :with-icon="false"
-          :disabled="isLoading"
         />
       </div>
     </div>
 
     <div class="filter-info">
       <span class="results-count">
-        Найдено записей: {{ callsData.length }}
+        Найдено записей: {{ totalItems }}
       </span>
       <CustomButton
         class="reset-button"
@@ -320,6 +316,16 @@ onUnmounted(() => {
         :calls-data="callsData"
         @details="openCallDetails"
       />
+      <div class="pagination">
+        <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Назад</button>
+        <span>Страница {{ currentPage }} из {{ totalPages || 1 }}</span>
+        <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">Вперёд</button>
+        <select v-model="pageSize" @change="currentPage = 1; loadAllCDRData()">
+          <option :value="20">20</option>
+          <option :value="50">50</option>
+          <option :value="100">100</option>
+        </select>
+      </div>
     </main>
     <CallDetailsModal
       :show="showCallDetails"
@@ -492,6 +498,47 @@ onUnmounted(() => {
   }
 }
 
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.pagination button {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--color-background-mute);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: var(--color-surface-hover);
+}
+
+.pagination select {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
   .search-filters {
@@ -506,6 +553,14 @@ onUnmounted(() => {
   .filter-info {
     align-items: flex-start;
     gap: var(--spacing-sm);
+  }
+  .pagination {
+    gap: var(--spacing-sm);
+  }
+  .pagination button,
+  .pagination select {
+    font-size: 0.75rem;
+    padding: var(--spacing-xs);
   }
 }
 </style>
