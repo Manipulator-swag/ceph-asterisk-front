@@ -73,14 +73,13 @@
                 </div>
 
                 <div>
-                  <label for="ami_port" class="label">AMI-порт (только чтение)</label>
+                  <label for="ami_port" class="label">AMI-порт</label>
                   <CustomInput
                     id="ami_port"
                     name="ami_port"
                     type="number"
                     v-model="formData.ami_port"
                     :with-icon="false"
-                    disabled
                   />
                 </div>
 
