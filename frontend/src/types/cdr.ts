@@ -40,3 +40,10 @@ export interface CallRecord {
   status: string
   vats: string
 }
+
+export interface CDRResponse {
+  total: number
+  items: CDRRecord[]
+  limit: number
+  offset: number
+}

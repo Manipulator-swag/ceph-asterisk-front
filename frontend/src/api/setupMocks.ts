@@ -8,9 +8,17 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   const mock = new MockAdapter(axiosInstance, { delayResponse: 300 })
 
   // CDR
-  mock.onGet(API_CONFIG.ENDPOINTS.CDR).reply((config) => {
-    const limit = config.params?.limit ? Number(config.params.limit) : 100
-    return [200, generateMockCDR(limit)]
+   mock.onGet(API_CONFIG.ENDPOINTS.CDR).reply((config) => {
+    const limit = Number(config.params?.limit) || 100
+    const offset = Number(config.params?.offset) || 0
+    const allData = generateMockCDR(1000)
+    const items = allData.slice(offset, offset + limit)
+    return [200, {
+      total: allData.length,
+      items: items,
+      limit: limit,
+      offset: offset,
+    }]
   })
 
   // Список всех ВАТС
