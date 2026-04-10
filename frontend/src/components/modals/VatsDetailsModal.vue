@@ -1,10 +1,9 @@
 <template>
-  <div v-if="show" class="modal-overlay" @click="handleOverlayClick">
+  <div v-if="show" class="modal-overlay" @dblclick="closeModal">
     <div class="modal-content large" @click.stop>
       <!-- Шапка -->
       <div class="modal-header">
         <div class="header-row">
-          <CustomButton variant="outline" @click="closeModal"> Назад </CustomButton>
           <div class="header-info">
             <h1 class="modal-title">{{ instanceDetails?.name || vatsData?.name }}</h1>
             <div class="info-badges">
@@ -15,17 +14,24 @@
               <span class="text-gray-600">HTTP порт: {{ formData.http_port }}</span>
             </div>
           </div>
+          <CustomButton variant="outline" @click="closeModal"> Назад </CustomButton>
         </div>
         <div class="header-actions">
           <CustomButton variant="outline" @click="handleReload" :disabled="isSaving">
             Обновить
           </CustomButton>
-          <CustomButton @click="handleSave" :disabled="isSaving">
-            <span v-if="isSaving" class="button-loading">
+          <CustomButton
+            class="delete-btn"
+            variant="danger"
+            @click="handleDelete"
+            :disabled="isSaving || isDeleting"
+            title="Это действие необратимо. Будут удалены все внутренние номера и конфигурация."
+          >
+            <span v-if="isDeleting" class="button-loading">
               <span class="spinner"></span>
-              Сохранение...
+              Удаление...
             </span>
-            <span v-else>Сохранить</span>
+            <span v-else>Удалить ВАТС</span>
           </CustomButton>
         </div>
       </div>
@@ -251,20 +257,14 @@
         </template>
       </CustomTabs>
       <div class="delete-section">
-        <hr class="delete-divider" />
         <div class="delete-actions">
-          <CustomButton
-            variant="danger"
-            @click="handleDelete"
-            :disabled="isSaving || isDeleting"
-          >
-            <span v-if="isDeleting" class="button-loading">
+          <CustomButton class="save-btn" @click="handleSave" :disabled="isSaving">
+            <span v-if="isSaving" class="button-loading">
               <span class="spinner"></span>
-              Удаление...
+              Сохранение...
             </span>
-            <span v-else>Удалить ВАТС</span>
+            <span v-else>Сохранить</span>
           </CustomButton>
-          <p class="delete-warning">⚠️ Это действие необратимо. Будут удалены все внутренние номера и конфигурация.</p>
         </div>
       </div>
     </div>
@@ -515,10 +515,11 @@ const addNumber = async () => {
       transport: newNumber.sipTransport,
       callerid: newNumber.callerId,
     }
-    const createdUser = await vatsApi.createVatsUser(instanceId, createData)
-    const newInternal = mapApiUserToInternal(createdUser)
-    formData.internalNumbers.push(newInternal)
+    await vatsApi.createVatsUser(instanceId, createData)
+    
     cacheStore.invalidate(instanceId)
+    await loadInternalNumbers()
+    
     cancelAddNumber()
     toast.addToast({ message: 'Номер успешно добавлен', type: 'success' })
   } catch (error) {
@@ -531,6 +532,7 @@ const addNumber = async () => {
     creatingNumber.value = false
   }
 }
+
 // Удаление номера
 const deleteNumber = async (id: string) => {
   if (!props.vatsData) return
@@ -554,6 +556,7 @@ const deleteNumber = async (id: string) => {
     deletingNumberId.value = null
   }
 }
+
 // Открытие модалки
 watch(
   () => props.show,
@@ -569,10 +572,6 @@ watch(
 
 const closeModal = () => {
   emit('close')
-}
-
-const handleOverlayClick = () => {
-  if (!isSaving.value) closeModal()
 }
 
 const handleReload = async () => {
@@ -601,6 +600,7 @@ const handleSave = async () => {
       name: formData.name,
       sip_port: formData.sip_port,
       http_port: formData.http_port,
+      ami_port: formData.ami_port,
       status: formData.status === 'Активна' ? 'running' : 'stopped',
     })
     toast.addToast({ message: 'Изменения сохранены', type: 'success' })
@@ -691,6 +691,7 @@ const sendCommand = async () => {
   max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border);
   animation: slideIn 0.3s ease;
@@ -739,6 +740,10 @@ const sendCommand = async () => {
   padding-top: var(--spacing-md);
 }
 
+.save-btn {
+  color: var(--color-success);
+}
+
 .delete-section {
   margin-top: var(--spacing-lg);
 }
@@ -755,6 +760,10 @@ const sendCommand = async () => {
   align-items: center;
   gap: var(--spacing-md);
   flex-wrap: wrap;
+}
+
+.delete-btn {
+  color: var(--color-error);
 }
 
 .delete-warning {
@@ -875,6 +884,7 @@ const sendCommand = async () => {
     margin: var(--spacing-md);
     width: calc(100% - 2 * var(--spacing-md));
     max-width: none;
+    overflow-x: auto;
   }
   .grid-cols-2 {
     grid-template-columns: 1fr;

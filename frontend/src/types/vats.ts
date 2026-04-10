@@ -100,5 +100,6 @@ export interface AsteriskInstanceUpdate {
   name?: string | null
   sip_port?: number | null
   http_port?: number | null
-  status?: string | null   // 'running' | 'stopped' | null
+  ami_port?: number | null
+  status?: string | null
 }

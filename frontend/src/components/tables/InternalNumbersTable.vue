@@ -63,6 +63,8 @@ const handleDelete = (id: string) => emit('delete', id)
 <style scoped>
 .internal-numbers-table {
   width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .loading-state {
@@ -101,6 +103,7 @@ const handleDelete = (id: string) => emit('delete', id)
 
 .table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
 }
 
@@ -141,7 +144,9 @@ const handleDelete = (id: string) => emit('delete', id)
   .table td {
     padding: var(--spacing-sm);
   }
-
+  .table {
+    min-width: 500px;
+  }
   .py-8 {
     padding-top: var(--spacing-lg);
     padding-bottom: var(--spacing-lg);
@@ -151,8 +156,12 @@ const handleDelete = (id: string) => emit('delete', id)
 @media (max-width: 480px) {
   .table th,
   .table td {
-    padding: var(--spacing-xs);
-    font-size: 0.875rem;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+  }
+  .custom-button {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
   }
 }
 </style>
