@@ -404,6 +404,7 @@ onUnmounted(() => {
   gap: var(--spacing-md);
   overflow-x: auto;
   flex-wrap: nowrap;
+  overflow: visible;
 }
 
 .filter-item {
