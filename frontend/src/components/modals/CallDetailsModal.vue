@@ -41,9 +41,6 @@
           <!-- В будущем: кнопка "Скачать запись" -->
         </div>
       </div>
-      <div class="modal-footer">
-        <CustomButton @click="closeModal">Закрыть</CustomButton>
-      </div>
     </div>
   </div>
 </template>

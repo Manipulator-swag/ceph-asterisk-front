@@ -55,7 +55,16 @@
       <div v-if="currentStep === 2" class="modal-step">
         <h2 class="modal-title">Создание новой ВАТС</h2>
         <p class="modal-subtitle">Шаг 2: Настройка портов</p>
-
+        <div class="selected-info">
+          <div class="info-row">
+            <span class="info-label">Наименование ВАТС:</span>
+            <span class="info-value">{{ formData.name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Тестовые пользователи:</span>
+            <span class="info-value">{{ formData.create_test_users ? 'Да (6001, 6002)' : 'Нет' }}</span>
+          </div>
+        </div>
         <div v-if="step2Error" class="error-message">
           <span>{{ step2Error }}</span>
         </div>
@@ -546,6 +555,35 @@ const closeWithSuccess = () => {
   justify-content: flex-end;
   flex-wrap: wrap;
   margin-top: var(--spacing-lg);
+}
+
+.selected-info {
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  border-left: 3px solid var(--color-primary);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--spacing-xs);
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.info-value {
+  font-weight: 600;
+  color: var(--color-text)
 }
 
 .cancel-btn {

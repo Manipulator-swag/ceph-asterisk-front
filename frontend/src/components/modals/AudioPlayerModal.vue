@@ -90,6 +90,7 @@ const closeModal = () => {
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
+  color: var(--color-text);
 }
 .modal-footer {
   margin-top: var(--spacing-lg);
