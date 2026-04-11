@@ -83,12 +83,12 @@ const handleUploadFile = async (event: Event) => {
   const file = files[0]
   if (!file) return
 
-  const allowedMimeTypes = ['audio/wav', 'audio/x-wav']
+  const allowedMimeTypes = ['audio/wav', 'audio/x-wav', 'audio/mpeg']
   const extension = file.name.split('.').pop()?.toLowerCase()
-  const isValid = allowedMimeTypes.includes(file.type) || (extension === 'wav')
+  const isValid = allowedMimeTypes.includes(file.type) || (extension === 'wav') || (extension === 'mp3')
 
   if (!isValid) {
-    toast.addToast({ message: 'Можно загружать только файлы в формате WAV', type: 'warning' })
+    toast.addToast({ message: 'Можно загружать только файлы в формате WAV или MP3', type: 'warning' })
     input.value = ''
     return
   }
