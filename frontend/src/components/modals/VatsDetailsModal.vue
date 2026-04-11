@@ -133,7 +133,7 @@
             <div class="card">
               <div class="flex justify-between items-center mb-4">
                 <h3 class="numbers-page-header">Внутренние номера</h3>
-                <CustomButton @click="showAddNumber = true" :disabled="isSaving || loadingNumbers">
+                <CustomButton @click="showAddNumber = true" :hidden="showAddNumber" :disabled="isSaving || loadingNumbers">
                   Добавить номер
                 </CustomButton>
               </div>

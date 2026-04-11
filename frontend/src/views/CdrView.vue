@@ -9,6 +9,8 @@ import CallDetailsModal from '@/components/modals/CallDetailsModal.vue'
 import axios from 'axios'
 import type { CallRecord, CDRRecord, CDRQueryParams } from '@/types/cdr'
 import { cdrApi } from '@/api/cdrApi'
+import { vatsApi } from '@/api/vatsApi'
+import type { VatsInstanceFromAPI } from '@/types/vats'
 
 // Состояния
 const searchQuery = ref('')
@@ -24,6 +26,9 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const srcFilter = ref('')
 const dstFilter = ref('')
+const selectedInstance = ref<string>('')
+const vatsList = ref<VatsInstanceFromAPI[]>([])
+const isLoadingVats = ref(false)
 
 let searchDebounceTimer: number | null = null
 
@@ -32,15 +37,25 @@ const openCallDetails = (call: CallRecord) => {
   showCallDetails.value = true
 }
 
+//селекторы
 const hasActiveFilters = computed(() => {
-  return (srcFilter.value ?? '').trim() !== '' || 
-         (dstFilter.value ?? '').trim() !== '' || 
-         selectedStatus.value !== 'all' || 
-         (selectedDate.value ?? '') !== ''
+  return (srcFilter.value ?? '').trim() !== '' ||
+         (dstFilter.value ?? '').trim() !== '' ||
+         selectedStatus.value !== 'all' ||
+         (selectedDate.value ?? '') !== '' ||
+         selectedInstance.value !== ''
 })
 
 const callsData = computed(() => {
   return cdrData.value.map(transformCDRToCallRecord)
+})
+
+const vatsOptions = computed(() => {
+  const options = [{ value: '', label: 'Все ВАТС' }]
+  vatsList.value.forEach(vats => {
+    options.push({ value: vats.name, label: vats.name })
+  })
+  return options
 })
 
 const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
@@ -72,7 +87,6 @@ const loadAllCDRData = async () => {
   
   if (trimmedSrc) params.src = trimmedSrc
   if (trimmedDst) params.dst = trimmedDst
-  
   if (selectedStatus.value !== 'all') {
     params.disposition = selectedStatus.value
   }
@@ -80,7 +94,9 @@ const loadAllCDRData = async () => {
     params.date_from = `${selectedDate.value}T00:00:00`
     params.date_to = `${selectedDate.value}T23:59:59`
   }
-
+  if (selectedInstance.value) {
+    params.instance_name = selectedInstance.value
+  }
   try {
     const response = await cdrApi.getCDR(params)
     cdrData.value = response.items
@@ -99,12 +115,25 @@ const loadAllCDRData = async () => {
   }
 }
 
+const loadVatsList = async () => {
+  isLoadingVats.value = true
+  try {
+    vatsList.value = await vatsApi.getVatsList()
+  } catch (error) {
+    console.error('Ошибка загрузки списка ВАТС:', error)
+  } finally {
+    isLoadingVats.value = false
+  }
+}
+
+
 const resetFilters = () => {
   srcFilter.value = ''
   dstFilter.value = ''
   selectedStatus.value = 'all'
   selectedDate.value = ''
   currentPage.value = 1
+  selectedInstance.value = ''
   loadAllCDRData()
 }
 
@@ -122,6 +151,11 @@ watch(selectedStatus, () => {
 })
 
 watch(selectedDate, () => {
+  currentPage.value = 1
+  loadAllCDRData()
+})
+
+watch(selectedInstance, () => {
   currentPage.value = 1
   loadAllCDRData()
 })
@@ -199,6 +233,7 @@ const exportToJson = () => {
 
 onMounted(() => {
   loadAllCDRData()
+  loadVatsList()
 })
 
 onUnmounted(() => {
@@ -257,6 +292,15 @@ onUnmounted(() => {
           label="Номер назначения"
           placeholder="Введите dst..."
           :with-icon="false"
+        />
+      </div>
+      <div class="filter-item">
+        <CustomSelect
+          v-model="selectedInstance"
+          label="ВАТС"
+          placeholder="Все ВАТС"
+          :options="vatsOptions"
+          :disabled="isLoadingVats"
         />
       </div>
       <div class="filter-item">
@@ -358,11 +402,13 @@ onUnmounted(() => {
   background: var(--color-background-mute);
   border-radius: var(--radius-lg);
   gap: var(--spacing-md);
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 
 .filter-item {
-  flex: 1;
-  min-width: 200px;
+  flex: 1 1 200px;
+  min-width: 180px;
 }
 
 .filter-info {

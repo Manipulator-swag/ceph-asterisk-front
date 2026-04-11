@@ -56,4 +56,5 @@ export interface CDRQueryParams {
   disposition?: string
   date_from?: string
   date_to?: string
+  instance_name?: string
 }
