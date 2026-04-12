@@ -4,6 +4,7 @@ import { generateMockCDR } from '@/mocks/cdrMocks'
 import { generateMockInstance, generateMockInstanceList, generateMockUsers } from '@/mocks/vatsMocks'
 import { getMockAudioFiles, addMockAudioFile, deleteMockAudioFile, getMockAudioFileBlob } from '@/mocks/audioMocks'
 import { API_CONFIG } from '@/config/api'
+import { getMockLogs } from '@/mocks/logsMocks'
 
 export const setupMocks = (axiosInstance: AxiosInstance) => {
   const mock = new MockAdapter(axiosInstance, { delayResponse: 300 })
@@ -87,5 +88,12 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
       return [404, { detail: 'File not found' }]
     }
     return [400, { detail: 'Invalid request' }]
+  })
+
+  mock.onGet('/logs/').reply((config) => {
+    const page = parseInt(config.params?.page ?? 0)
+    const limit = parseInt(config.params?.limit ?? 20)
+    const mockData = getMockLogs(page, limit)
+    return [200, mockData]
   })
 }

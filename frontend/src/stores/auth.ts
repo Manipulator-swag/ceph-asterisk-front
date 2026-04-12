@@ -87,7 +87,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const endpoint = method === 'ldap' ? '/auth/login/ldap' : '/auth/login'
       const response = await axiosInstance.post(endpoint, { login, password })
-      const { access_token, refresh_token } = response.data
+      const { access_token, refresh_token, accessToken, refreshToken } = response.data
+      const finalAccessToken = access_token || accessToken
+      const finalRefreshToken = refresh_token || refreshToken
       if (remember) {
         localStorage.setItem('access_token', access_token)
         localStorage.setItem('refresh_token', refresh_token)
