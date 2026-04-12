@@ -30,9 +30,11 @@ const hasActiveFilters = computed(() => {
 const levelOptions = [
   { value: 'all', label: 'Все' },
   { value: 'TUFO', label: 'TUFO' },
+  { value: 'WARN', label: 'WARNING' },
   { value: 'ERROR', label: 'ERROR' },
-  { value: 'WARN', label: 'WARN' },
   { value: 'DEBUG', label: 'DEBUG' },
+  { value: 'NOTICE', label: 'NOTICE' },
+  { value: 'UNKNOWN', label: 'UNKNOWN' },
 ]
 
 // Клиентская фильтрация (поиск по сообщению и уровню)

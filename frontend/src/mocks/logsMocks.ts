@@ -17,8 +17,8 @@ const randomDate = (): string => {
 }
 
 // Уровни логов (веса для случайного выбора)
-const levels = ['TUFO', 'WARN', 'ERROR', 'DEBUG']
-const levelWeights = [0.6, 0.2, 0.1, 0.1]
+const levels = ['TUFO', 'WARN', 'ERROR', 'DEBUG', 'NOTICE', 'UNKNOWN']
+const levelWeights = [0.5, 0.15, 0.1, 0.1, 0.1, 0.05]
 
 const getRandomLevel = (): string => {
   const rand = Math.random()
@@ -57,6 +57,15 @@ const messagesByLevel: Record<string, string[]> = {
     'Audio stream established for call ID: 12345',
     'Parsing config file: extensions.conf',
     'Dialplan application "Dial" invoked',
+  ],
+  NOTICE: [
+    'Reloading configuration files',
+    'SIP peer 107 registered successfully',
+    'Call detail record written to database',
+  ],
+  UNKNOWN: [
+    'Unrecognized command: "status"',
+    'Unexpected token in config line 123',
   ],
 }
 

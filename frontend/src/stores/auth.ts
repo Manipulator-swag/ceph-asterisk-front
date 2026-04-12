@@ -91,11 +91,11 @@ export const useAuthStore = defineStore('auth', () => {
       const finalAccessToken = access_token || accessToken
       const finalRefreshToken = refresh_token || refreshToken
       if (remember) {
-        localStorage.setItem('access_token', access_token)
-        localStorage.setItem('refresh_token', refresh_token)
+        localStorage.setItem('access_token', finalAccessToken)
+        localStorage.setItem('refresh_token', finalRefreshToken)
       } else {
-        sessionStorage.setItem('access_token', access_token)
-        sessionStorage.setItem('refresh_token', refresh_token)
+        sessionStorage.setItem('access_token', finalAccessToken)
+        sessionStorage.setItem('refresh_token', finalRefreshToken)
       }
       const userResponse = await axiosInstance.get('/auth/me')
       user.value = userResponse.data

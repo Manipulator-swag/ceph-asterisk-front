@@ -6,6 +6,7 @@
           <tr>
             <th class="column-timestamp">Время</th>
             <th class="column-level">Уровень</th>
+            <th class="column-pbx">ВАТС</th>
             <th class="column-message">Сообщение</th>
           </tr>
         </thead>
@@ -14,9 +15,10 @@
             <td class="cell-timestamp">{{ formatTimestamp(log.message.timestamp) }}</td>
             <td class="cell-level">
               <span class="level-badge" :class="getLevelClass(log.message.level)">
-                {{ log.message.level }}
+                {{ displayLevel(log.message.level) }}
               </span>
             </td>
+            <td class="cell-pbx">{{ log.pbx_id || '—' }}</td>
             <td class="cell-message">{{ log.message.msg }}</td>
           </tr>
         </tbody>
@@ -45,12 +47,20 @@ const formatTimestamp = (ts: string | null): string => {
   })
 }
 
+// Отображение уровня: WARN -> WARNING, остальные как есть
+const displayLevel = (level: string): string => {
+  if (level === 'WARN') return 'WARNING'
+  return level
+}
+
 const getLevelClass = (level: string): string => {
   const classes: Record<string, string> = {
     TUFO: 'level-tufo',
     WARN: 'level-warn',
     ERROR: 'level-error',
     DEBUG: 'level-debug',
+    NOTICE: 'level-notice',
+    UNKNOWN: 'level-unknown',
   }
   return classes[level] || 'level-default'
 }
@@ -105,6 +115,16 @@ const getLevelClass = (level: string): string => {
   font-size: 0.8125rem;
   font-weight: 500;
   display: inline-block;
+}
+.level-notice {
+  background-color: rgba(46, 204, 113, 0.1);
+  color: #2ecc71;
+  border: 1px solid rgba(46,204,113,0.2);
+}
+.level-unknown {
+  background-color: rgba(127, 140, 141, 0.1);
+  color: #7f8c8d;
+  border: 1px solid rgba(127,140,141,0.2);
 }
 .level-tufo { background-color: rgba(52, 152, 219, 0.1); color: #3498db; border: 1px solid rgba(52,152,219,0.2); }
 .level-warn { background-color: rgba(241, 196, 15, 0.1); color: #f1c40f; border: 1px solid rgba(241,196,15,0.2); }
