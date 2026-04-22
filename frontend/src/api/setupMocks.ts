@@ -93,7 +93,9 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onGet('/logs/').reply((config) => {
     const page = parseInt(config.params?.page ?? 0)
     const limit = parseInt(config.params?.limit ?? 20)
-    const mockData = getMockLogs(page, limit)
-    return [200, mockData]
+    const level = config.params?.level ?? null
+    const pbx_id = config.params?.pbx_id ?? null
+    const text = config.params?.text ?? null
+    return [200, getMockLogs(page, limit, level, pbx_id, text)]
   })
 }

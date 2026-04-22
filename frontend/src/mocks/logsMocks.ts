@@ -69,17 +69,18 @@ const messagesByLevel: Record<string, string[]> = {
   ],
 }
 
+// Генерация одной записи лога (согласно новой спецификации)
 const generateMockLogEntry = (id: number): LogEntry => {
   const level = getRandomLevel()
   const messages = messagesByLevel[level]
-  const msg = messages[Math.floor(Math.random() * messages.length)]
+  const msgText = messages[Math.floor(Math.random() * messages.length)]
   return {
     message: {
       timestamp: randomDate(),
       level,
       pid: (Math.floor(Math.random() * 9000) + 1000).toString(),
-      source: 'asterisk',
-      msg,
+      file: Math.random() > 0.7 ? 'asterisk.c' : null,
+      message: msgText,   // поле message (было msg)
     },
     pbx_id: Math.random() > 0.5 ? `pbx-${Math.floor(Math.random() * 10) + 1}` : null,
   }
@@ -88,10 +89,10 @@ const generateMockLogEntry = (id: number): LogEntry => {
 // Статический кэш мок-данных (генерируем один раз)
 let staticLogsCache: LogEntry[] | null = null
 
-const generateMockLogs = (count: number = 200): LogEntry[] => {
+const generateMockLogs = (count: number = 500): LogEntry[] => {
   if (!staticLogsCache) {
     staticLogsCache = Array.from({ length: count }, (_, i) => generateMockLogEntry(i + 1))
-    // Сортируем по убыванию timestamp (новые сверху)
+    // сортировка по убыванию timestamp
     staticLogsCache.sort((a, b) => {
       const tsA = a.message.timestamp ? new Date(a.message.timestamp).getTime() : 0
       const tsB = b.message.timestamp ? new Date(b.message.timestamp).getTime() : 0
@@ -101,8 +102,30 @@ const generateMockLogs = (count: number = 200): LogEntry[] => {
   return staticLogsCache
 }
 
-export const getMockLogs = (page: number = 0, limit: number = 20): LogsModel => {
-  const allLogs = generateMockLogs(250)
+// Экспортируемая функция с поддержкой фильтрации
+export const getMockLogs = (
+  page: number = 0,
+  limit: number = 20,
+  level?: string | null,
+  pbx_id?: string | null,
+  text?: string | null
+): LogsModel => {
+  let allLogs = generateMockLogs(500)
+
+  // Фильтрация по уровню
+  if (level && level !== 'all') {
+    allLogs = allLogs.filter(log => log.message.level === level)
+  }
+  // Фильтрация по pbx_id (ВАТС)
+  if (pbx_id && pbx_id !== 'all') {
+    allLogs = allLogs.filter(log => String(log.pbx_id) === pbx_id)
+  }
+  // Фильтрация по тексту сообщения
+  if (text && text.trim()) {
+    const lowerText = text.toLowerCase()
+    allLogs = allLogs.filter(log => log.message.message.toLowerCase().includes(lowerText))
+  }
+
   const offset = page * limit
   const items = allLogs.slice(offset, offset + limit)
   return {

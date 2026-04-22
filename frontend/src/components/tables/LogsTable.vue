@@ -19,7 +19,7 @@
               </span>
             </td>
             <td class="cell-pbx">{{ log.pbx_id || '—' }}</td>
-            <td class="cell-message">{{ log.message.msg }}</td>
+            <td class="cell-message">{{ log.message.message }}</td>  <!-- изменено -->
           </tr>
         </tbody>
       </table>
@@ -47,7 +47,6 @@ const formatTimestamp = (ts: string | null): string => {
   })
 }
 
-// Отображение уровня: WARN -> WARNING, остальные как есть
 const displayLevel = (level: string): string => {
   if (level === 'WARN') return 'WARNING'
   return level

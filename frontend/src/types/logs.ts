@@ -2,8 +2,8 @@ export interface ParsedMessageModel {
   timestamp: string | null
   level: string
   pid: string | null
-  source: string
-  msg: string
+  file?: string | null
+  message: string
 }
 
 export interface LogEntry {

@@ -1,65 +1,90 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { ref, computed, watch, onMounted } from 'vue'
 import PageHeader from '@/components/UI/PageHeader.vue'
 import CustomButton from '@/components/UI/CustomButton.vue'
 import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomSelect from '@/components/UI/CustomSelect.vue'
 import LogsTable from '@/components/tables/LogsTable.vue'
-import { logsApi } from '@/api/logsApi'
+import { logsApi, type LogsQueryParams } from '@/api/logsApi'
 import type { LogEntry } from '@/types/logs'
+import { vatsApi } from '@/api/vatsApi'
+import type { VatsInstanceFromAPI } from '@/types/vats'
 import { useToastStore } from '@/stores/toast'
+import axios from 'axios'
 
 const toast = useToastStore()
 
 // Состояния
-const searchQuery = ref('')
-const selectedLevel = ref('all')
-const isLoading = ref(false)
-const errorMessage = ref('')
 const logsData = ref<LogEntry[]>([])
 const totalItems = ref(0)
+const isLoading = ref(false)
+const errorMessage = ref('')
+
+// Фильтры
+const searchText = ref('')
+const selectedLevel = ref('all')
+const selectedVats = ref('all')   // значение 'all' или строковый id ВАТС
 const currentPage = ref(1)
 const pageSize = ref(20)
 
-const hasActiveFilters = computed(() => {
-  return searchQuery.value.trim() !== '' || selectedLevel.value !== 'all'
-})
+// Список ВАТС для селектора
+const vatsList = ref<VatsInstanceFromAPI[]>([])
+const isLoadingVats = ref(false)
 
-// Уровни логов (из спецификации)
+// Уровни логов (значения для API)
 const levelOptions = [
   { value: 'all', label: 'Все' },
   { value: 'TUFO', label: 'TUFO' },
-  { value: 'WARN', label: 'WARNING' },
+  { value: 'WARN', label: 'WARNING' },   // значение WARN, лейбл WARNING
   { value: 'ERROR', label: 'ERROR' },
   { value: 'DEBUG', label: 'DEBUG' },
   { value: 'NOTICE', label: 'NOTICE' },
   { value: 'UNKNOWN', label: 'UNKNOWN' },
 ]
 
-// Клиентская фильтрация (поиск по сообщению и уровню)
-const filteredLogs = computed(() => {
-  let result = logsData.value
-  if (selectedLevel.value !== 'all') {
-    result = result.filter(log => log.message.level === selectedLevel.value)
+// Загрузка списка ВАТС
+const loadVatsList = async () => {
+  isLoadingVats.value = true
+  try {
+    vatsList.value = await vatsApi.getVatsList()
+  } catch (err) {
+    console.error('Ошибка загрузки ВАТС:', err)
+  } finally {
+    isLoadingVats.value = false
   }
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.trim().toLowerCase()
-    result = result.filter(log => log.message.msg.toLowerCase().includes(query))
-  }
-  return result
+}
+
+const vatsOptions = computed(() => {
+  const opts = [{ value: 'all', label: 'Все ВАТС' }]
+  vatsList.value.forEach(vats => {
+    opts.push({ value: String(vats.id), label: vats.name })
+  })
+  return opts
 })
 
-// Загрузка данных с сервера
+// Загрузка логов с сервера
 const loadLogs = async () => {
   isLoading.value = true
   errorMessage.value = ''
+  const params: LogsQueryParams = {
+    page: currentPage.value - 1,  // API page начинается с 0
+    limit: pageSize.value,
+  }
+  if (selectedLevel.value !== 'all') {
+    params.level = selectedLevel.value
+  }
+  if (selectedVats.value !== 'all') {
+    params.pbx_id = selectedVats.value
+  }
+  const text = searchText.value?.trim()
+  if (text) {
+    params.text = text
+  }
   try {
-    const response = await logsApi.getLogs(currentPage.value - 1, pageSize.value)
+    const response = await logsApi.getLogs(params)
     logsData.value = response.data
     totalItems.value = response.total
   } catch (err: unknown) {
-    console.error('Ошибка загрузки логов:', err)
     let msg = 'Ошибка загрузки логов'
     if (axios.isAxiosError(err)) {
       msg = err.response?.data?.detail || err.message
@@ -73,42 +98,21 @@ const loadLogs = async () => {
   }
 }
 
-// Обновление при смене страницы или лимита
-const refreshLogs = () => {
-  loadLogs()
-}
-
-// Экспорт отфильтрованных логов (текущая страница + фильтры)
-const exportLogs = () => {
-  if (filteredLogs.value.length === 0) {
-    toast.addToast({ message: 'Нет данных для экспорта', type: 'warning' })
-    return
-  }
-  const exportData = {
-    exportDate: new Date().toLocaleString('ru-RU'),
-    filters: {
-      level: selectedLevel.value,
-      search: searchQuery.value,
-    },
-    data: filteredLogs.value,
-  }
-  const jsonStr = JSON.stringify(exportData, null, 2)
-  const blob = new Blob([jsonStr], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `logs_${new Date().toISOString().split('T')[0]}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
+// Сброс фильтров
 const resetFilters = () => {
-  searchQuery.value = ''
+  searchText.value = ''
   selectedLevel.value = 'all'
-  // Не сбрасываем страницу, но можно currentPage = 1
+  selectedVats.value = 'all'
   currentPage.value = 1
   loadLogs()
 }
+
+// Активные фильтры (для кнопки сброса)
+const hasActiveFilters = computed(() => {
+  return (searchText.value ?? '').trim() !== '' ||
+         selectedLevel.value !== 'all' ||
+         selectedVats.value !== 'all'
+})
 
 // Пагинация
 const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
@@ -123,11 +127,51 @@ const changePageSize = (size: number) => {
   loadLogs()
 }
 
-// Сброс страницы при изменении фильтров (клиентская фильтрация не требует перезагрузки с сервера)
-// Но если нужно серверная фильтрация – добавить watch и вызов loadLogs с параметрами.
-// Пока оставляем клиентскую фильтрацию, поэтому страницу не сбрасываем.
+// Следим за изменениями фильтров (кроме текста – с дебаунсом)
+let filterDebounceTimer: number | null = null
+const applyFiltersAndReload = () => {
+  if (filterDebounceTimer) clearTimeout(filterDebounceTimer)
+  filterDebounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadLogs()
+  }, 500)
+}
+
+watch(selectedLevel, () => { currentPage.value = 1; loadLogs() })
+watch(selectedVats, () => { currentPage.value = 1; loadLogs() })
+watch(searchText, () => applyFiltersAndReload())
+watch(searchText, (newVal) => {
+  if (newVal === undefined) {
+    searchText.value = ''
+  }
+})
+// Экспорт отфильтрованных логов (текущая страница)
+const exportLogs = () => {
+  if (logsData.value.length === 0) {
+    toast.addToast({ message: 'Нет данных для экспорта', type: 'warning' })
+    return
+  }
+  const exportData = {
+    exportDate: new Date().toLocaleString('ru-RU'),
+    filters: {
+      level: selectedLevel.value,
+      pbx_id: selectedVats.value,
+      text: searchText.value,
+    },
+    data: logsData.value,
+  }
+  const jsonStr = JSON.stringify(exportData, null, 2)
+  const blob = new Blob([jsonStr], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `logs_${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 onMounted(() => {
+  loadVatsList()
   loadLogs()
 })
 </script>
@@ -136,45 +180,40 @@ onMounted(() => {
   <div class="wrapper">
     <PageHeader title="Журнал логов" subtitle="Все ВАТС">
       <template #actions>
-        <CustomButton variant="outline" @click="refreshLogs" :disabled="isLoading">
+        <CustomButton variant="outline" @click="loadLogs" :disabled="isLoading">
           {{ isLoading ? 'Загрузка...' : '⟳ Обновить' }}
         </CustomButton>
-        <CustomButton @click="exportLogs" :disabled="!filteredLogs.length">
+        <CustomButton @click="exportLogs" :disabled="!logsData.length">
           Экспорт
         </CustomButton>
       </template>
     </PageHeader>
 
     <div v-if="errorMessage" class="error-message">
-      <div class="error-content">
-        <span class="error-icon">⚠</span>
-        <span>{{ errorMessage }}</span>
-      </div>
-      <button @click="errorMessage = ''" class="error-close">×</button>
+      <span>{{ errorMessage }}</span>
+      <button @click="errorMessage = ''">×</button>
     </div>
 
     <div class="search-filters">
       <div class="filter-item">
-        <CustomInput v-model="searchQuery" label="Поиск в логах" placeholder="Ключевое слово..." />
+        <CustomInput v-model="searchText" label="Поиск в логах" placeholder="Ключевое слово..." />
       </div>
       <div class="filter-item">
         <CustomSelect v-model="selectedLevel" label="Уровень" :options="levelOptions" />
       </div>
+      <div class="filter-item">
+        <CustomSelect v-model="selectedVats" label="ВАТС" :options="vatsOptions" :disabled="isLoadingVats" />
+      </div>
+      <div class="filter-actions">
+        <CustomButton variant="outline" @click="resetFilters" :disabled="isLoading || !hasActiveFilters">
+          Сбросить фильтры
+        </CustomButton>
+      </div>
     </div>
 
     <div class="filter-info">
-      <span class="results-count">Найдено записей: {{ filteredLogs.length }}</span>
-      <span v-if="searchQuery || selectedLevel !== 'all'" class="active-filters">
-        (активные фильтры)
-      </span>
-      <CustomButton
-        variant="outline"
-        @click="resetFilters"
-        :disabled="isLoading || !hasActiveFilters"
-        class="reset-button"
-      >
-        Сбросить фильтры
-      </CustomButton>
+      <span class="results-count">Найдено записей: {{ totalItems }}</span>
+      <span v-if="hasActiveFilters" class="active-filters">(активные фильтры)</span>
     </div>
 
     <main class="content">
@@ -182,13 +221,12 @@ onMounted(() => {
         <div class="spinner large"></div>
         <p>Загрузка логов...</p>
       </div>
-      <div v-else-if="filteredLogs.length === 0" class="empty-state">
+      <div v-else-if="logsData.length === 0" class="empty-state">
         <p>По вашему запросу ничего не найдено</p>
       </div>
-      <LogsTable v-else :logs-data="filteredLogs" />
+      <LogsTable v-else :logs-data="logsData" />
     </main>
 
-    <!-- Пагинация -->
     <div class="pagination" v-if="totalItems > 0">
       <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">Назад</button>
       <span>Страница {{ currentPage }} из {{ totalPages || 1 }}</span>
