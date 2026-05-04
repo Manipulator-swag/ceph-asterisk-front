@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import CustomButton from '@/components/UI/CustomButton.vue'
+import CustomInput from '@/components/UI/CustomInput.vue'
+import CustomSelect from '@/components/UI/CustomSelect.vue'
 import VatsTable from '@/components/tables/VatsTable.vue'
 import PageHeader from '@/components/UI/PageHeader.vue'
 import CreateVatsModal from '@/components/modals/CreateVatsModal.vue'
@@ -10,14 +12,31 @@ import { vatsApi } from '@/api/vatsApi'
 import { useToastStore } from '@/stores/toast'
 
 const toast = useToastStore()
-
+const searchName = ref('')
+const filterStatus = ref('all')
 const showCreateModal = ref(false)
 const showDetailsModal = ref(false)
 const editingVats = ref<VatsTableItem | null>(null)
 const isLoading = ref(false)
 const errorMessage = ref('')
-
+const statusOptions = [
+  { value: 'all', label: 'Все' },
+  { value: 'Активна', label: 'Активна' },
+  { value: 'Отключена', label: 'Отключена' },
+]
 const serversData = ref<VatsTableItem[]>([])
+
+const filteredServers = computed(() => {
+  let result = serversData.value
+  const name = (searchName.value ?? '').trim()
+  if (name) {
+    result = result.filter(item => item.name.toLowerCase().includes(name.toLowerCase()))
+  }
+  if (filterStatus.value !== 'all') {
+    result = result.filter(item => item.status === filterStatus.value)
+  }
+  return result
+})
 
 const openCreateModal = () => {
   showCreateModal.value = true
@@ -151,6 +170,17 @@ const reloadData = () => {
   errorMessage.value = ''
   fetchVatsList()
 }
+
+const resetFilters = () => {
+  searchName.value = ''
+  filterStatus.value = 'all'
+}
+
+watch(searchName, (newVal) => {
+  if (newVal === undefined) {
+    searchName.value = ''
+  }
+})
 </script>
 
 <template>
@@ -189,6 +219,35 @@ const reloadData = () => {
     </div>
 
     <main class="content">
+      <div class="filters-bar">
+        <div class="filter-item">
+          <CustomInput
+            v-model="searchName"
+            label="Наименование ВАТС"
+            placeholder="Поиск по имени..."
+            :with-icon="true"
+            :disabled="isLoading"
+          />
+        </div>
+        <div class="filter-item">
+          <CustomSelect
+            v-model="filterStatus"
+            label="Статус"
+            :options="statusOptions"
+            :disabled="isLoading"
+          />
+        </div>
+        <div class="filter-actions">
+          <CustomButton
+            variant="outline"
+            @click="resetFilters"
+            :disabled="isLoading || ((searchName ?? '') === '' && filterStatus === 'all')"
+            class="reset-btn"
+          >
+            Сбросить
+          </CustomButton>
+        </div>
+      </div>
       <div v-if="isLoading && serversData.length === 0" class="loading-state">
         <div class="spinner large"></div>
         <p>Загрузка ВАТС...</p>
@@ -197,9 +256,10 @@ const reloadData = () => {
         <p>Нет созданных ВАТС</p>
         <CustomButton @click="openCreateModal">Создать первую ВАТС</CustomButton>
       </div>
+      
       <VatsTable
         v-else
-        :table-data="serversData"
+        :table-data="filteredServers"
         @edit="openDetailsModal"
         @delete="handleVATSDeleted"
       />
@@ -292,6 +352,32 @@ const reloadData = () => {
   gap: 1rem;
   animation: slideIn 0.3s ease;
 }
+
+.filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+  background: var(--color-background-mute);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+
+.filter-item {
+  flex: 2 1 200px;
+}
+
+.filter-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.reset-btn {
+  height: 38px; /* выровнять по высоте инпутов */
+}
+
 
 @keyframes slideIn {
   from {
