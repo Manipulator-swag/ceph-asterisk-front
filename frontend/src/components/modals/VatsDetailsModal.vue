@@ -90,26 +90,24 @@
                 </div>
 
                 <div>
-                  <label for="rtp_start" class="label">RTP начало (только чтение)</label>
+                  <label for="rtp_start" class="label">RTP начало</label>
                   <CustomInput
                     id="rtp_start"
                     name="rtp_start"
                     type="number"
                     v-model="formData.rtp_port_start"
                     :with-icon="false"
-                    disabled
                   />
                 </div>
 
                 <div>
-                  <label for="rtp_end" class="label">RTP конец (только чтение)</label>
+                  <label for="rtp_end" class="label">RTP конец</label>
                   <CustomInput
                     id="rtp_end"
                     name="rtp_end"
                     type="number"
                     v-model="formData.rtp_port_end"
                     :with-icon="false"
-                    disabled
                   />
                 </div>
 
@@ -601,6 +599,8 @@ const handleSave = async () => {
       sip_port: formData.sip_port,
       http_port: formData.http_port,
       ami_port: formData.ami_port,
+      rtp_port_start: formData.rtp_port_start,
+      rtp_port_end: formData.rtp_port_end,
       status: formData.status === 'Активна' ? 'running' : 'stopped',
     })
     toast.addToast({ message: 'Изменения сохранены', type: 'success' })

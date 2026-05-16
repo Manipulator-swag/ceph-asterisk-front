@@ -205,15 +205,20 @@ onMounted(() => {
         <CustomSelect v-model="selectedVats" label="ВАТС" :options="vatsOptions" :disabled="isLoadingVats" />
       </div>
       <div class="filter-actions">
-        <CustomButton variant="outline" @click="resetFilters" :disabled="isLoading || !hasActiveFilters">
-          Сбросить фильтры
-        </CustomButton>
       </div>
     </div>
 
     <div class="filter-info">
       <span class="results-count">Найдено записей: {{ totalItems }}</span>
       <span v-if="hasActiveFilters" class="active-filters">(активные фильтры)</span>
+      <CustomButton
+        variant="outline"
+        @click="resetFilters"
+        :disabled="isLoading || !hasActiveFilters"
+        class="reset-button"
+      >
+        Сбросить фильтры
+      </CustomButton>
     </div>
 
     <main class="content">

@@ -242,7 +242,7 @@ watch(searchName, (newVal) => {
             variant="outline"
             @click="resetFilters"
             :disabled="isLoading || ((searchName ?? '') === '' && filterStatus === 'all')"
-            class="reset-btn"
+            class="reset-button"
           >
             Сбросить
           </CustomButton>
@@ -374,8 +374,14 @@ watch(searchName, (newVal) => {
   align-items: center;
 }
 
-.reset-btn {
-  height: 38px; /* выровнять по высоте инпутов */
+.reset-button {
+  background-color: var(--color-background-soft);
+  margin: 0;
+}
+
+.reset-button:disabled {
+  opacity: 0.3;
+  cursor: auto;
 }
 
 
