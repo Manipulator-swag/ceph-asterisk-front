@@ -160,6 +160,12 @@ const configTypeOptions = [
   { value: 'pjsip.conf', label: 'pjsip.conf' },
   { value: 'extensions.conf', label: 'extensions.conf' },
   { value: 'queues.conf', label: 'queues.conf' },
+  { value: 'manager.conf', label: 'manager.conf' },
+  { value: 'stasis.conf', label: 'stasis.conf' },
+  { value: 'cdr.conf', label: 'cdr.conf' },
+  { value: 'cdr_adaptive_odbc.conf', label: 'cdr_adaptive_odbc.conf' },
+  { value: 'http.conf', label: 'http.conf' },
+  { value: 'rtp.conf', label: 'rtp.conf' },
 ]
 
 const historyItems = ref<ConfigHistoryEntry[]>([])
