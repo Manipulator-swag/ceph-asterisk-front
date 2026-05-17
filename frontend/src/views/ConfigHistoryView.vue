@@ -283,7 +283,6 @@ const rollbackVersion = async (entry: ConfigHistoryEntry) => {
   if (!confirm(`Откатить конфигурацию к версии ${entry.version}? Действие необратимо.`)) return
   try {
     const result = await configHistoryApi.rollback(selectedInstanceId.value!, selectedConfigType.value, {
-      history_id: entry.id,
       version: entry.version,
       change_author: 'user',
       reload_asterisk: true,
