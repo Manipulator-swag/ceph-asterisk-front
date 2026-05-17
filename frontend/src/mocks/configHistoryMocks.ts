@@ -10,7 +10,8 @@ const configTypes = ['pjsip.conf', 'extensions.conf', 'queues.conf']
 
 // Базовая генерация
 const generateVersionContent = (instanceId: number, configType: string, version: number): string => {
-  return `# ${configType} для инстанса ${instanceId}, версия ${version}
+  const filename = getFilename(configType)
+  return `# ${filename} для инстанса ${instanceId}, версия ${version}
 [general]
 context=default
 allowoverlap=yes
@@ -20,6 +21,21 @@ type=peer
 host=dynamic
 context=from-internal
 `
+}
+
+const getFilename = (configType: string): string => {
+  const map: Record<string, string> = {
+    pjsip: 'pjsip.conf',
+    extensions: 'extensions.conf',
+    queues: 'queues.conf',
+    manager: 'manager.conf',
+    stasis: 'stasis.conf',
+    cdr: 'cdr.conf',
+    cdr_adaptive_odbc: 'cdr_adaptive_odbc.conf',
+    http: 'http.conf',
+    rtp: 'rtp.conf',
+  }
+  return map[configType] || `${configType}.conf`
 }
 
 const generateHistoryEntry = (id: number, version: number, instanceId: number, configType: string): any => ({
@@ -46,8 +62,8 @@ export const getMockConfigHistory = (
   }
   const items = historyStore.get(key)!
   return {
-    config_type: configType,
-    filename: configType,
+    config_type: configType,   // то же, что пришло
+    filename: getFilename(configType),
     items,
   }
 }

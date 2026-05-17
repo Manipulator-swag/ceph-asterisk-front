@@ -157,15 +157,15 @@ const instances = ref<VatsInstanceFromAPI[]>([])
 const selectedInstanceId = ref<number | null>(null)
 const selectedConfigType = ref('pjsip.conf')
 const configTypeOptions = [
-  { value: 'pjsip.conf', label: 'pjsip.conf' },
-  { value: 'extensions.conf', label: 'extensions.conf' },
-  { value: 'queues.conf', label: 'queues.conf' },
-  { value: 'manager.conf', label: 'manager.conf' },
-  { value: 'stasis.conf', label: 'stasis.conf' },
-  { value: 'cdr.conf', label: 'cdr.conf' },
-  { value: 'cdr_adaptive_odbc.conf', label: 'cdr_adaptive_odbc.conf' },
-  { value: 'http.conf', label: 'http.conf' },
-  { value: 'rtp.conf', label: 'rtp.conf' },
+  { value: 'pjsip', label: 'pjsip.conf' },
+  { value: 'extensions', label: 'extensions.conf' },
+  { value: 'queues', label: 'queues.conf' },
+  { value: 'manager', label: 'manager.conf' },
+  { value: 'stasis', label: 'stasis.conf' },
+  { value: 'cdr', label: 'cdr.conf' },
+  { value: 'cdr_adaptive_odbc', label: 'cdr_adaptive_odbc.conf' },
+  { value: 'http', label: 'http.conf' },
+  { value: 'rtp', label: 'rtp.conf' },
 ]
 
 const historyItems = ref<ConfigHistoryEntry[]>([])
