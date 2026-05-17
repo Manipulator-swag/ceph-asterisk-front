@@ -41,6 +41,12 @@ const router = createRouter({
       component: () => import('@/views/ConstructorView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/config-history',
+      name: 'config-history',
+      component: () => import('@/views/ConfigHistoryView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

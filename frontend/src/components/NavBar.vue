@@ -93,6 +93,7 @@ const menuItems: MenuItem[] = [
   { id: 'logs', main: 'Логи', sub: '', route: '/logs' },
   { id: 'audio', main: 'Аудиофайлы', sub: '', route: '/audio' },
   { id: 'constructor', main: 'Конструктор', sub: '', route: '/constructor' },
+  { id: 'config-history', main: 'История конфигов', sub: '', route: '/config-history' },
 ]
 
 // Проверка размера экрана

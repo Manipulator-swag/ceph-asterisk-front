@@ -5,6 +5,13 @@ import { generateMockInstance, generateMockInstanceList, generateMockUsers } fro
 import { getMockAudioFiles, addMockAudioFile, deleteMockAudioFile, getMockAudioFileBlob } from '@/mocks/audioMocks'
 import { API_CONFIG } from '@/config/api'
 import { getMockLogs } from '@/mocks/logsMocks'
+import {
+  getMockConfigHistory,
+  getMockConfigVersionContent,
+  postMockRollback,
+  getMockCurrentConfig,
+} from '@/mocks/configHistoryMocks'
+
 
 export const setupMocks = (axiosInstance: AxiosInstance) => {
   const mock = new MockAdapter(axiosInstance, { delayResponse: 300 })
@@ -97,5 +104,46 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     const pbx_id = config.params?.pbx_id ?? null
     const text = config.params?.text ?? null
     return [200, getMockLogs(page, limit, level, pbx_id, text)]
+  })
+  mock.onGet(/\/instances\/\d+\/config\/[^/]+\/history$/).reply((config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/config\/([^/]+)\/history/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const configType = match[2]
+      return [200, getMockConfigHistory(instanceId, configType)]
+    }
+    return [404, { detail: 'Not found' }]
+  })
+  mock.onGet(/\/instances\/\d+\/config\/[^/]+\/history\/\d+/).reply((config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/config\/([^/]+)\/history\/(\d+)/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const configType = match[2]
+      const version = parseInt(match[3], 10)
+      return [200, getMockConfigVersionContent(instanceId, configType, version)]
+    }
+    return [404]
+  })
+  mock.onPost(/\/instances\/\d+\/config\/[^/]+\/rollback/).reply(async (config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/config\/([^/]+)\/rollback/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const configType = match[2]
+      const body = JSON.parse(config.data)
+      const version = body.version || body.history_id
+      if (version) {
+        return [200, postMockRollback(instanceId, configType, version)]
+      }
+    }
+    return [400, { detail: 'Invalid request' }]
+  })
+  mock.onGet(/\/instances\/\d+\/config\/[^/]+$/).reply((config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/config\/([^/]+)$/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const configType = match[2]
+      return [200, getMockCurrentConfig(instanceId, configType)]
+    }
+    return [404]
   })
 }
