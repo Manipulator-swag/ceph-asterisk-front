@@ -11,6 +11,14 @@ import {
   postMockRollback,
   getMockCurrentConfig,
 } from '@/mocks/configHistoryMocks'
+import {
+  getMockQueues,
+  getMockQueue,
+  createMockQueue,
+  updateMockQueue,
+  deleteMockQueue,
+} from '@/mocks/queuesMocks'
+import type { QueueCreate, QueueUpdate } from '@/types/queues';
 
 
 export const setupMocks = (axiosInstance: AxiosInstance) => {
@@ -143,6 +151,65 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
       const instanceId = parseInt(match[1], 10)
       const configType = match[2]
       return [200, getMockCurrentConfig(instanceId, configType)]
+    }
+    return [404]
+  })
+
+  mock.onGet(/\/instances\/(\d+)\/queues\/$/).reply((config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/queues\/$/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      return [200, getMockQueues(instanceId)]
+    }
+    return [404, { detail: 'Instance not found' }]
+  })
+  mock.onPost(/\/instances\/(\d+)\/queues\/$/).reply(async (config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/queues\/$/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const body = JSON.parse(config.data) as QueueCreate
+      const newQueue = createMockQueue(instanceId, body)
+      return [201, newQueue]
+    }
+    return [404]
+  })
+
+  // GET /instances/{instance_id}/queues/{queue_name}
+  mock.onGet(/\/instances\/(\d+)\/queues\/([^/]+)$/).reply((config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/queues\/([^/]+)$/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const queueName = decodeURIComponent(match[2])
+      const queue = getMockQueue(instanceId, queueName)
+      if (queue) return [200, queue]
+      return [404, { detail: 'Queue not found' }]
+    }
+    return [404]
+  })
+
+  // PUT /instances/{instance_id}/queues/{queue_name}
+  mock.onPut(/\/instances\/(\d+)\/queues\/([^/]+)$/).reply(async (config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/queues\/([^/]+)$/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const queueName = decodeURIComponent(match[2])
+      const body = JSON.parse(config.data) as QueueUpdate
+      const updated = updateMockQueue(instanceId, queueName, body)
+      if (updated) return [200, updated]
+      return [404, { detail: 'Queue not found' }]
+    }
+    return [404]
+  })
+
+  // DELETE /instances/{instance_id}/queues/{queue_name}
+  mock.onDelete(/\/instances\/(\d+)\/queues\/([^/]+)$/).reply((config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/queues\/([^/]+)$/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const queueName = decodeURIComponent(match[2])
+      const deleted = deleteMockQueue(instanceId, queueName)
+      if (deleted) return [200, {}]
+      return [404, { detail: 'Queue not found' }]
     }
     return [404]
   })

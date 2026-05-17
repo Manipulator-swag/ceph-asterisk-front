@@ -47,6 +47,12 @@ const router = createRouter({
       component: () => import('@/views/ConfigHistoryView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/queues',
+      name: 'queues',
+      component: () => import('@/views/QueuesView.vue'),
+      meta: { requiresAuth: true },
+    }
   ],
 })
 
