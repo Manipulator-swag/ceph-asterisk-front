@@ -1,16 +1,52 @@
-import type {
-  DialplanResponse,
-  DialplanRowResponse,
-  DialplanRowUpdate,
-} from '@/types/dialplan'
+import type { DialplanRowResponse, DialplanRowUpdate, DialplanResponse } from '@/types/dialplan'
 
+// Базовая структура для тестового инстанса
 const defaultRows: DialplanRowResponse[] = [
-  { id: 1, cat_metric: 1, var_metric: 1, category: 'globals', var_name: 'CALLERID', var_val: '"Anonymous"', commented: 0 },
-  { id: 2, cat_metric: 2, var_metric: 1, category: 'default', var_name: 'exten', var_val: '_X.,1,NoOp(Incoming call)', commented: 0 },
-  { id: 3, cat_metric: 2, var_metric: 2, category: 'default', var_name: 'exten', var_val: '_X.,n,Dial(SIP/${EXTEN},20)', commented: 0 },
-  { id: 4, cat_metric: 2, var_metric: 3, category: 'default', var_name: 'exten', var_val: '_X.,n,Hangup()', commented: 0 },
-  { id: 5, cat_metric: 3, var_metric: 1, category: 'internal', var_name: 'exten', var_val: '101,1,Dial(SIP/101,20)', commented: 0 },
-  { id: 6, cat_metric: 3, var_metric: 2, category: 'internal', var_name: 'exten', var_val: '101,n,Voicemail(101@default,u)', commented: 0 },
+  {
+    id: 1,
+    cat_metric: 1,
+    var_metric: 1,
+    category: 'default',
+    var_name: 'exten',
+    var_val: '1,NoOp,Incoming call',
+    commented: 0,
+  },
+  {
+    id: 2,
+    cat_metric: 1,
+    var_metric: 2,
+    category: 'default',
+    var_name: 'exten',
+    var_val: '2,Dial,SIP/101,20',
+    commented: 0,
+  },
+  {
+    id: 3,
+    cat_metric: 1,
+    var_metric: 3,
+    category: 'default',
+    var_name: 'include',
+    var_val: 'internal',
+    commented: 0,
+  },
+  {
+    id: 4,
+    cat_metric: 2,
+    var_metric: 1,
+    category: 'internal',
+    var_name: 'exten',
+    var_val: '1,Answer',
+    commented: 0,
+  },
+  {
+    id: 5,
+    cat_metric: 2,
+    var_metric: 2,
+    category: 'internal',
+    var_name: 'switch',
+    var_val: '_X.',
+    commented: 0,
+  },
 ]
 
 const dialplanStore = new Map<number, DialplanResponse>()
@@ -23,12 +59,12 @@ export const getMockDialplan = (instanceId: number, filename: string = 'extensio
   return dialplanStore.get(instanceId)!
 }
 
-export const updateMockDialplan = (instanceId: number, data: { rows: DialplanRowUpdate[] }) => {
+export const updateMockDialplan = (instanceId: number, data: { rows: DialplanRowUpdate[] }): DialplanResponse => {
   const existing = getMockDialplan(instanceId)
   // Перестраиваем rows с новыми данными, назначаем новые id
   const newRows: DialplanRowResponse[] = data.rows.map((row, idx) => ({
     id: Date.now() + idx,
-    cat_metric: row.cat_metric,
+    cat_metric: row.cat_metric ?? 0,
     var_metric: row.var_metric,
     category: row.category,
     var_name: row.var_name,
@@ -51,13 +87,13 @@ export const getMockContext = (instanceId: number, contextName: string): Dialpla
   return { ...dp, rows: filteredRows }
 }
 
-export const updateMockContext = (instanceId: number, contextName: string, data: { rows: DialplanRowUpdate[] }) => {
+export const updateMockContext = (instanceId: number, contextName: string, data: { rows: DialplanRowUpdate[] }): DialplanResponse => {
   const dp = getMockDialplan(instanceId)
   // Удаляем старые строки контекста
   const otherRows = dp.rows.filter(r => r.category !== contextName)
   const newRows: DialplanRowResponse[] = data.rows.map((row, idx) => ({
     id: Date.now() + idx,
-    cat_metric: row.cat_metric,
+    cat_metric: row.cat_metric ?? 0,
     var_metric: row.var_metric,
     category: contextName,
     var_name: row.var_name,
