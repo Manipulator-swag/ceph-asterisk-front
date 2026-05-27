@@ -1,132 +1,315 @@
-<script setup lang="ts">
-import { ref } from 'vue'
-import CustomButton from '@/components/UI/CustomButton.vue'
-import PageHeader from '@/components/UI/PageHeader.vue'
-import ConfigTable from '@/components/tables/ConfigTable.vue'
-import type { ConfigParam } from '@/types/configs.ts'
-
-// Данные параметров конфигурации
-const generalParameters = ref([
-  {
-    parameter: 'Максимальная длительность звонка',
-    name: 'max_call_duration',
-    type: 'number',
-    defaultValue: '3600',
-    description: 'Максимальная длительность звонка в секундах',
-  },
-])
-
-const networkParameters = ref([
-  {
-    parameter: 'SIP-порт',
-    name: 'sip_port',
-    type: 'number',
-    defaultValue: '5060',
-    description: 'Порт для SIP-соединений',
-  },
-  {
-    parameter: 'Тип транспорта',
-    name: 'transport_type',
-    type: 'select',
-    defaultValue: 'udp',
-    description: 'Протокол транспорта для SIP',
-  },
-])
-
-const recordingParameters = ref([
-  {
-    parameter: 'Запись разговоров',
-    name: 'enable_recording',
-    type: 'boolean',
-    defaultValue: false,
-    description: 'Включить автоматическую запись всех разговоров',
-  },
-])
-
-const handleAddParameter = () => {
-  console.log('Добавление нового параметра')
-  // Логика добавления нового параметра
-}
-
-const handleEditParam = (param: ConfigParam) => {
-  console.log('Редактирование параметра:', param.name)
-  // Логика редактирования параметра
-  // Например, открытие модального окна для редактирования
-}
-
-const handleSaveParam = (param: ConfigParam) => {
-  console.log('Сохранение параметра:', param.name)
-  // Логика сохранения параметра
-  // Например, отправка на сервер
-}
-</script>
-
 <template>
-  <div class="wrapper">
-    <PageHeader
-      title="Конструктор конфигураций"
-      subtitle="Создавайте и управляйте параметрами конфигурирования ВАТС"
-    >
+  <div class="constructor-page">
+    <PageHeader title="Конструктор диалплана" subtitle="Редактирование extensions.conf">
       <template #actions>
-        <CustomButton @click="handleAddParameter">+ Добавить параметр</CustomButton>
+        <div class="header-actions">
+          <CustomSelect
+            v-model="selectedInstanceId"
+            :options="instanceOptions"
+            label="ВАТС"
+            placeholder="Выберите ВАТС"
+            :disabled="loading"
+          />
+          <CustomButton variant="outline" @click="loadDialplan" :disabled="loading || !selectedInstanceId" class="btn">
+            Загрузить
+          </CustomButton>
+        </div>
       </template>
     </PageHeader>
 
+    <div v-if="error" class="error-message">{{ error }}</div>
+
     <main class="content">
-      <ConfigTable
-        title="Общие"
-        :parameters="generalParameters"
-        @edit="handleEditParam"
-        @save="handleSaveParam"
-      />
-
-      <ConfigTable
-        title="Сетевые"
-        :parameters="networkParameters"
-        @edit="handleEditParam"
-        @save="handleSaveParam"
-      />
-
-      <ConfigTable
-        title="Запись"
-        :parameters="recordingParameters"
-        @edit="handleEditParam"
-        @save="handleSaveParam"
-      />
+      <div v-if="loading" class="loading-state">
+        <div class="spinner large"></div>
+        <p>Загрузка диалплана...</p>
+      </div>
+      <div v-else-if="!selectedInstanceId" class="empty-state">
+        <p>Выберите ВАТС для редактирования диалплана</p>
+      </div>
+      <div v-else-if="Object.keys(contextsMap).length === 0" class="empty-state">
+        <p>Нет контекстов в диалплане</p>
+        <CustomButton @click="openNewContextModal">Создать первый контекст</CustomButton>
+      </div>
+      <div v-else>
+        <div class="contexts-toolbar">
+          <CustomSelect
+            v-model="selectedContext"
+            :options="contextOptions"
+            label="Контекст"
+          />
+          <CustomButton size="sm" @click="openNewContextModal">Новый контекст</CustomButton>
+        </div>
+        <ContextEditor
+          v-if="selectedContext && contextsMap[selectedContext]"
+          :key="selectedContext"
+          :context-name="selectedContext"
+          :rows="contextsMap[selectedContext]"
+          @update="saveContext"
+        />
+        <div class="global-actions">
+          <CustomButton variant="primary" @click="saveAllChanges" :disabled="savingAll">
+            Сохранить весь диалплан
+          </CustomButton>
+          <CustomButton variant="outline" @click="loadDialplan" :disabled="loading">
+            Отменить изменения
+          </CustomButton>
+        </div>
+      </div>
     </main>
+
+    <!-- Модальное окно создания контекста -->
+    <div v-if="showNewContextModal" class="modal-overlay" @click="showNewContextModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Создание контекста</h3>
+        </div>
+        <div class="modal-body">
+          <CustomInput v-model="newContextName" label="Имя контекста" placeholder="например, incoming" />
+        </div>
+        <div class="modal-footer">
+          <CustomButton variant="outline" @click="showNewContextModal = false">Отмена</CustomButton>
+          <CustomButton @click="createNewContext">Создать</CustomButton>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
-<style scoped>
-.wrapper {
-  width: 100%;
-  padding: 0 var(--spacing-md);
-  display: flex;
-  flex-direction: column;
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
+import PageHeader from '@/components/UI/PageHeader.vue'
+import CustomButton from '@/components/UI/CustomButton.vue'
+import CustomSelect from '@/components/UI/CustomSelect.vue'
+import CustomInput from '@/components/UI/CustomInput.vue'
+import ContextEditor from '@/components/dialplan/ContextEditor.vue'
+import { dialplanApi } from '@/api/dialplanApi'
+import { vatsApi } from '@/api/vatsApi'
+import type { VatsInstanceFromAPI } from '@/types/vats'
+import type { DialplanRowResponse, DialplanRowUpdate } from '@/types/dialplan'
+import { useToastStore } from '@/stores/toast'
+import axios from 'axios'
+
+const toast = useToastStore()
+const instances = ref<VatsInstanceFromAPI[]>([])
+const selectedInstanceId = ref<number | null>(null)
+const loading = ref(false)
+const savingAll = ref(false)
+const error = ref('')
+
+// Данные диалплана
+const allRows = ref<DialplanRowResponse[]>([])
+const contextsMap = ref<Record<string, DialplanRowResponse[]>>({})
+const selectedContext = ref<string | null>(null)
+
+// Модальное окно
+const showNewContextModal = ref(false)
+const newContextName = ref('')
+
+const instanceOptions = computed(() => instances.value.map(i => ({ value: i.id, label: i.name })))
+const contextOptions = computed(() => Object.keys(contextsMap.value).map(ctx => ({ value: ctx, label: ctx })))
+
+const loadInstances = async () => {
+  try {
+    instances.value = await vatsApi.getVatsList()
+  } catch (err: unknown) {
+    let msg = 'Ошибка загрузки ВАТС'
+    if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
+    else if (err instanceof Error) msg = err.message
+    error.value = msg
+  }
 }
 
+const loadDialplan = async () => {
+  if (!selectedInstanceId.value) return
+  loading.value = true
+  error.value = ''
+  try {
+    const data = await dialplanApi.getDialplan(selectedInstanceId.value)
+    allRows.value = data.rows
+    const map: Record<string, DialplanRowResponse[]> = {}
+    for (const row of allRows.value) {
+      if (!map[row.category]) map[row.category] = []
+      map[row.category].push(row)
+    }
+    for (const ctx in map) {
+      map[ctx].sort((a, b) => a.var_metric - b.var_metric)
+    }
+    contextsMap.value = map
+    // Если выбранный контекст отсутствует – сбросить
+    if (selectedContext.value && !contextsMap.value[selectedContext.value]) {
+      selectedContext.value = Object.keys(map)[0] || null
+    } else if (Object.keys(map).length > 0 && !selectedContext.value) {
+      selectedContext.value = Object.keys(map)[0]
+    }
+  } catch (err: unknown) {
+    let msg = 'Ошибка загрузки диалплана'
+    if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
+    else if (err instanceof Error) msg = err.message
+    error.value = msg
+    toast.addToast({ message: msg, type: 'error' })
+  } finally {
+    loading.value = false
+  }
+}
+
+const saveContext = async (updatedRows: DialplanRowUpdate[]) => {
+  if (!selectedInstanceId.value || !selectedContext.value) return
+  try {
+    await dialplanApi.updateContext(selectedInstanceId.value, selectedContext.value, {
+      filename: 'extensions.conf',
+      rows: updatedRows,
+      change_author: 'user',
+      reload_asterisk: false,
+    })
+    toast.addToast({ message: `Контекст "${selectedContext.value}" сохранён`, type: 'success' })
+    await loadDialplan()
+  } catch (err: unknown) {
+    let msg = 'Ошибка сохранения контекста'
+    if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
+    else if (err instanceof Error) msg = err.message
+    toast.addToast({ message: msg, type: 'error' })
+  }
+}
+
+const saveAllChanges = async () => {
+  if (!selectedInstanceId.value) return
+  const allUpdatedRows: DialplanRowUpdate[] = []
+  for (const ctx in contextsMap.value) {
+    const rows = contextsMap.value[ctx]
+    rows.forEach(row => {
+      allUpdatedRows.push({
+        cat_metric: row.cat_metric,
+        var_metric: row.var_metric,
+        category: row.category,
+        var_name: row.var_name,
+        var_val: row.var_val,
+        commented: row.commented,
+      })
+    })
+  }
+  savingAll.value = true
+  try {
+    await dialplanApi.updateDialplan(selectedInstanceId.value, {
+      filename: 'extensions.conf',
+      rows: allUpdatedRows,
+      change_author: 'user',
+      reload_asterisk: true,
+    })
+    toast.addToast({ message: 'Весь диалплан сохранён и перезагружен', type: 'success' })
+    await loadDialplan()
+  } catch (err: unknown) {
+    let msg = 'Ошибка сохранения диалплана'
+    if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
+    else if (err instanceof Error) msg = err.message
+    toast.addToast({ message: msg, type: 'error' })
+  } finally {
+    savingAll.value = false
+  }
+}
+
+const openNewContextModal = () => {
+  newContextName.value = ''
+  showNewContextModal.value = true
+}
+
+const createNewContext = () => {
+  const name = newContextName.value.trim()
+  if (!name) {
+    toast.addToast({ message: 'Имя контекста не может быть пустым', type: 'warning' })
+    return
+  }
+  if (contextsMap.value[name]) {
+    toast.addToast({ message: 'Контекст с таким именем уже существует', type: 'warning' })
+    return
+  }
+  contextsMap.value[name] = []
+  selectedContext.value = name
+  showNewContextModal.value = false
+  toast.addToast({ message: `Создан пустой контекст "${name}". Добавьте строки.`, type: 'info' })
+}
+
+watch(selectedInstanceId, () => {
+  contextsMap.value = {}
+  selectedContext.value = null
+  if (selectedInstanceId.value) loadDialplan()
+})
+
+onMounted(() => {
+  loadInstances()
+})
+</script>
+
+<style scoped>
+.constructor-page {
+  width: 100%;
+  padding: 0 var(--spacing-md);
+}
+.header-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+.header-actions .btn {
+  margin-top: 1.7vh;
+}
 .content {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
   box-shadow: var(--shadow-sm);
+  margin-top: var(--spacing-md);
+}
+.contexts-toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  gap: var(--spacing-md);
+  align-items: flex-end;
+  margin-bottom: var(--spacing-lg);
+}
+.global-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-lg);
+}
+.error-message, .loading-state, .empty-state {
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+/* Модальное окно */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-modal);
+}
+
+.modal-content {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  width: 90%;
+  max-width: 450px;
+  box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border);
 }
 
-/* Адаптивность */
-@media (max-width: 768px) {
-  .wrapper {
-    padding: 0 var(--spacing-sm);
-  }
+.modal-header {
+  margin-bottom: var(--spacing-md);
+}
 
-  .content {
-    padding: var(--spacing-md);
-    border-radius: var(--radius-md);
-    margin: 0;
-    gap: 1.5rem;
-  }
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
 }
 </style>

@@ -89,7 +89,8 @@
     </main>
 
     <!-- Модальное окно создания/редактирования -->
-    <div v-if="showModal" class="modal-overlay" @click="showModal = false">
+    <Teleport to="body">
+        <div v-if="showModal" class="modal-overlay" @click="showModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>{{ editingQueue ? 'Редактирование очереди' : 'Создание очереди' }}</h3>
@@ -141,6 +142,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
@@ -399,7 +401,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10;
 }
 .modal-content {
   background: var(--color-surface);

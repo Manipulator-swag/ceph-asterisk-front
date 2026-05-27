@@ -19,7 +19,13 @@ import {
   deleteMockQueue,
 } from '@/mocks/queuesMocks'
 import type { QueueCreate, QueueUpdate } from '@/types/queues';
-
+import {
+  getMockDialplan,
+  updateMockDialplan,
+  getMockContexts,
+  getMockContext,
+  updateMockContext,
+} from '@/mocks/dialplanMocks'
 
 export const setupMocks = (axiosInstance: AxiosInstance) => {
   const mock = new MockAdapter(axiosInstance, { delayResponse: 300 })
@@ -210,6 +216,61 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
       const deleted = deleteMockQueue(instanceId, queueName)
       if (deleted) return [200, {}]
       return [404, { detail: 'Queue not found' }]
+    }
+    return [404]
+  })
+  mock.onGet(/\/instances\/(\d+)\/dialplan$/).reply((config) => {
+  const match = config.url?.match(/\/instances\/(\d+)\/dialplan/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const filename = config.params?.filename || 'extensions.conf'
+      return [200, getMockDialplan(instanceId, filename)]
+    }
+    return [404]
+  })
+  
+  // PUT /instances/{instance_id}/dialplan
+  mock.onPut(/\/instances\/(\d+)\/dialplan$/).reply(async (config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/dialplan/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const body = JSON.parse(config.data)
+      const updated = updateMockDialplan(instanceId, body)
+      return [200, updated]
+    }
+    return [404]
+  })
+  
+  // GET /instances/{instance_id}/dialplan/contexts
+  mock.onGet(/\/instances\/(\d+)\/dialplan\/contexts$/).reply((config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/dialplan\/contexts/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      return [200, getMockContexts(instanceId)]
+    }
+    return [404]
+  })
+  
+  // GET /instances/{instance_id}/dialplan/{context}
+  mock.onGet(/\/instances\/(\d+)\/dialplan\/([^/]+)$/).reply((config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/dialplan\/([^/]+)/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const contextName = decodeURIComponent(match[2])
+      return [200, getMockContext(instanceId, contextName)]
+    }
+    return [404]
+  })
+  
+  // PUT /instances/{instance_id}/dialplan/{context}
+  mock.onPut(/\/instances\/(\d+)\/dialplan\/([^/]+)$/).reply(async (config) => {
+    const match = config.url?.match(/\/instances\/(\d+)\/dialplan\/([^/]+)/)
+    if (match) {
+      const instanceId = parseInt(match[1], 10)
+      const contextName = decodeURIComponent(match[2])
+      const body = JSON.parse(config.data)
+      const updated = updateMockContext(instanceId, contextName, body)
+      return [200, updated]
     }
     return [404]
   })
