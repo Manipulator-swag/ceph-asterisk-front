@@ -3,14 +3,15 @@
     <div class="context-header">
       <h3>{{ contextName }}</h3>
       <div class="actions">
-        <CustomButton size="sm" @click="addRow">+ Добавить строку</CustomButton>
-        <CustomButton size="sm" variant="outline" @click="saveChanges" :disabled="saving">
-          {{ saving ? 'Сохранение...' : 'Сохранить' }}
+        <CustomButton size="sm" @click="addRow" class="btn">+ Добавить строку</CustomButton>
+        <CustomButton size="sm" variant="outline" @click="saveChanges" class="btn">
+          Сохранить
         </CustomButton>
       </div>
     </div>
     <div class="rows-table-wrapper">
       <div class="rows-table">
+        <!-- Заголовок -->
         <div class="row-item header-row">
           <div class="drag-placeholder"></div>
           <div class="type-col">Тип</div>
@@ -19,6 +20,7 @@
           <div class="args-col">Аргументы / Значение</div>
           <div class="action-col"></div>
         </div>
+        <!-- Строки -->
         <draggable
           v-model="localRows"
           item-key="tempId"
@@ -26,8 +28,12 @@
           @end="onDragEnd"
         >
           <template #item="{ element, index }">
-            <div>
-              <div class="row-item" :class="{ 'row-error': element.validationError }">
+            <div class="draggable-item">
+              <div
+                  class="row-item"
+                  :class="{ 'row-error': element.validationError }"
+                  :data-temp-id="element.tempId"
+                >
                 <span class="drag-handle">⋮⋮</span>
                 <div class="type-col">
                   <CustomSelect
@@ -37,9 +43,9 @@
                     @update:modelValue="onTypeChange(element)"
                   />
                 </div>
-                <!-- Для типа exten показываем приоритет и функцию -->
-                <div class="priority-col" v-if="element.type === 'exten'">
+                <div class="priority-col">
                   <CustomInput
+                    v-if="element.type === 'exten'"
                     type="number"
                     v-model.number="element.priority"
                     :with-icon="false"
@@ -49,7 +55,6 @@
                     @blur="validateRow(element)"
                   />
                 </div>
-                <div class="priority-col" v-else></div>
                 <div class="app-col">
                   <template v-if="element.type === 'exten'">
                     <CustomSelect
@@ -57,6 +62,7 @@
                       :options="appOptions"
                       class="app-select"
                       placeholder="Выберите функцию"
+                      @update:modelValue="validateRow(element)"
                     />
                   </template>
                   <template v-else-if="element.type === 'include'">
@@ -77,14 +83,13 @@
                   </template>
                 </div>
                 <div class="args-col">
-                  <template v-if="element.type === 'exten'">
-                    <CustomInput
-                      v-model="element.args"
-                      :with-icon="false"
-                      :placeholder="argsPlaceholder(element.app)"
-                      @blur="validateRow(element)"
-                    />
-                  </template>
+                  <CustomInput
+                    v-if="element.type === 'exten'"
+                    v-model="element.args"
+                    :with-icon="false"
+                    :placeholder="argsPlaceholder(element.app)"
+                    @blur="validateRow(element)"
+                  />
                 </div>
                 <div class="action-col">
                   <CustomButton size="sm" variant="danger" @click="removeRow(index)">✕</CustomButton>
@@ -102,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import CustomButton from '@/components/UI/CustomButton.vue'
 import CustomInput from '@/components/UI/CustomInput.vue'
@@ -111,9 +116,9 @@ import type { DialplanRowResponse, DialplanRowUpdate } from '@/types/dialplan'
 
 // Типы строк
 const typeOptions = [
-  { value: 'exten', label: 'exten (расширение)' },
-  { value: 'include', label: 'include (включить контекст)' },
-  { value: 'switch', label: 'switch (переключение по шаблону)' },
+  { value: 'exten', label: 'exten' },
+  { value: 'include', label: 'include' },
+  { value: 'switch', label: 'switch' },
 ]
 
 // Функции для exten
@@ -159,6 +164,7 @@ interface RowItem {
   includeContext: string
   switchPattern: string
   validationError: string | null
+  useParens: boolean
 }
 
 const props = defineProps<{
@@ -171,44 +177,72 @@ const emit = defineEmits<{
 }>()
 
 const localRows = ref<RowItem[]>([])
-const saving = ref(false)
+const originalRows = ref<RowItem[]>([])
 
 // Преобразование API-строк в наш формат
 const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
   return apiRows.map((row, idx) => {
-    const varName = row.var_name || ''
-    const varVal = row.var_val || ''
-    const commented = row.commented || 0
-    if (commented === 1) return null // игнорируем закомментированные строки
+    if (row.commented === 1) return null
 
-    // Парсим в зависимости от var_name
-    if (varName === 'exten') {
-      const parts = varVal.split(',')
-      const priority = parts[0] ? parseInt(parts[0], 10) : idx + 1
-      const app = parts[1] || 'NoOp'
-      const args = parts.slice(2).join(',')
+    if (row.var_name === 'exten') {
+      const val = row.var_val
+      const firstComma = val.indexOf(',')
+      let priority = 1
+      let rest = val
+      if (firstComma !== -1) {
+        priority = parseInt(val.substring(0, firstComma), 10) || 1
+        rest = val.substring(firstComma + 1)
+      }
+
+      let app = ''
+      let args = ''
+      let useParens = false
+      const parenOpen = rest.indexOf('(')
+
+      if (parenOpen !== -1) {
+        useParens = true
+        app = rest.substring(0, parenOpen)
+        const parenClose = rest.indexOf(')', parenOpen)
+        if (parenClose !== -1) {
+          args = rest.substring(parenOpen + 1, parenClose)
+        } else {
+          args = rest.substring(parenOpen + 1)
+        }
+      } else {
+        const secondComma = rest.indexOf(',')
+        if (secondComma !== -1) {
+          app = rest.substring(0, secondComma)
+          args = rest.substring(secondComma + 1)
+        } else {
+          app = rest
+        }
+        useParens = false
+      }
+
       return {
         tempId: row.id || Date.now() + idx,
         type: 'exten',
         priority,
-        app,
+        app: app || 'NoOp',
         args,
         includeContext: '',
         switchPattern: '',
         validationError: null,
+        useParens,
       }
-    } else if (varName === 'include') {
+    } else if (row.var_name === 'include') {
       return {
         tempId: row.id || Date.now() + idx,
         type: 'include',
         priority: 0,
         app: '',
         args: '',
-        includeContext: varVal,
+        includeContext: row.var_val,
         switchPattern: '',
         validationError: null,
+        useParens: false,
       }
-    } else if (varName === 'switch') {
+    } else if (row.var_name === 'switch') {
       return {
         tempId: row.id || Date.now() + idx,
         type: 'switch',
@@ -216,8 +250,9 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
         app: '',
         args: '',
         includeContext: '',
-        switchPattern: varVal,
+        switchPattern: row.var_val,
         validationError: null,
+        useParens: false,
       }
     }
     return null
@@ -231,7 +266,11 @@ const convertRowsToApi = (rows: RowItem[]): DialplanRowUpdate[] => {
     let varVal = ''
     if (row.type === 'exten') {
       varName = 'exten'
-      varVal = `${row.priority},${row.app}${row.args ? `,${row.args}` : ''}`
+      if (row.useParens) {
+        varVal = `${row.priority},${row.app}(${row.args})`
+      } else {
+        varVal = `${row.priority},${row.app}${row.args ? ',' + row.args : ''}`
+      }
     } else if (row.type === 'include') {
       varName = 'include'
       varVal = row.includeContext
@@ -292,15 +331,38 @@ const onTypeChange = (row: RowItem) => {
 watch(() => props.rows, (newRows) => {
   if (!newRows || !Array.isArray(newRows)) {
     localRows.value = []
+    originalRows.value = []
     return
   }
-  localRows.value = convertApiToRows(newRows)
-}, { immediate: true, deep: true })
+  const converted = convertApiToRows(newRows)
+  localRows.value = converted
+  // глубокая копия для эталона
+  originalRows.value = JSON.parse(JSON.stringify(converted))
+}, { immediate: true })
+
+// проверка, отличается ли текущее состояние от исходного
+const isDirty = (): boolean => {
+  const removeTempId = (rows: RowItem[]) =>
+    rows.map((row) => {
+      const { ...cleanRow } = row
+      delete cleanRow.tempId
+      return cleanRow
+    })
+
+  const currentClean = removeTempId(localRows.value)
+  const originalClean = removeTempId(originalRows.value)
+  return JSON.stringify(currentClean) !== JSON.stringify(originalClean)
+}
+
+// делаем метод доступным родителю
+defineExpose({ isDirty })
+
 
 const addRow = () => {
   const newPriority = localRows.value.filter(r => r.type === 'exten').length + 1
+  const newId = Date.now()
   localRows.value.push({
-    tempId: Date.now(),
+    tempId: newId,
     type: 'exten',
     priority: newPriority,
     app: 'NoOp',
@@ -308,6 +370,14 @@ const addRow = () => {
     includeContext: '',
     switchPattern: '',
     validationError: null,
+    useParens: false,
+  })
+
+  nextTick(() => {
+    const input = document.querySelector(
+      `[data-temp-id="${newId}"] .priority-input input`
+    ) as HTMLInputElement | null
+    input?.focus()
   })
 }
 
@@ -350,11 +420,16 @@ const saveChanges = () => {
 
 
 <style scoped>
+.btn {
+    background-color: var(--color-background-soft);
+    margin-right: 1vw;
+}
 .context-editor {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
   background: var(--color-background-soft);
+  overflow: visible;
 }
 .context-header {
   display: flex;
@@ -366,25 +441,29 @@ const saveChanges = () => {
 }
 .rows-table-wrapper {
   overflow-x: auto;
+  overflow-y: visible;
 }
 .rows-table {
-  min-width: 600px;
+  min-width: 700px;
   padding: var(--spacing-sm);
 }
-.header-row {
-  background: var(--color-background-mute);
-  font-weight: bold;
-  margin-bottom: var(--spacing-xs);
-}
 .row-item {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 30px 100px 90px 1fr 1fr 50px;
   gap: var(--spacing-sm);
+  align-items: center;
   padding: var(--spacing-xs);
   background: var(--color-surface);
   margin-bottom: var(--spacing-xs);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
+}
+.header-row {
+  background: var(--color-background-mute);
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 .row-error {
   border-left: 3px solid var(--color-error) !important;
@@ -408,34 +487,32 @@ const saveChanges = () => {
 .drag-placeholder {
   width: 24px;
 }
-.priority-col {
-  width: 90px;
-  flex-shrink: 0;
-}
+.priority-col { grid-column: 3 / 4; }
 .priority-input {
   width: 100%;
 }
-.app-col {
-  width: 180px;
-  flex-shrink: 0;
-}
+.type-col { grid-column: 2 / 3; }
 .app-select {
   width: 100%;
-}
-.args-col {
-  flex: 1;
-  min-width: 200px;
 }
 .args-input {
   width: 100%;
 }
-.action-col {
-  width: 50px;
-  text-align: center;
+.app-col { grid-column: 4 / 5; }
+.args-col { grid-column: 5 / 6; }
+.action-col { grid-column: 6 / 7; text-align: center; }
+
+:deep(.custom-select-dropdown) {
+  z-index: 2000 !important;
 }
+
 @media (max-width: 768px) {
   .priority-col { width: 70px; }
   .app-col { width: 150px; }
   .args-col { min-width: 150px; }
+  .row-item {
+    grid-template-columns: 30px 80px 70px 1fr 1fr 40px;
+    gap: var(--spacing-xs);
+  }
 }
 </style>

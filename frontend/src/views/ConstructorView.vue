@@ -34,15 +34,17 @@
       <div v-else>
         <div class="contexts-toolbar">
           <CustomSelect
-            v-model="selectedContext"
+            :modelValue="selectedContext"
             :options="contextOptions"
             label="Контекст"
+            @update:modelValue="handleContextChange"
           />
           <CustomButton size="sm" @click="openNewContextModal">Новый контекст</CustomButton>
         </div>
         <ContextEditor
           v-if="selectedContext && contextsMap[selectedContext]"
           :key="selectedContext"
+          ref="editorRef"
           :context-name="selectedContext"
           :rows="contextsMap[selectedContext]"
           @update="saveContext"
@@ -96,6 +98,7 @@ const selectedInstanceId = ref<number | null>(null)
 const loading = ref(false)
 const savingAll = ref(false)
 const error = ref('')
+const editorRef = ref<InstanceType<typeof ContextEditor> | null>(null)
 
 // Данные диалплана
 const allRows = ref<DialplanRowResponse[]>([])
@@ -118,6 +121,22 @@ const loadInstances = async () => {
     else if (err instanceof Error) msg = err.message
     error.value = msg
   }
+}
+
+const handleContextChange = (newContext: string) => {
+  if (!editorRef.value) {
+    selectedContext.value = newContext
+    return
+  }
+  // Если есть несохранённые изменения — спрашиваем пользователя
+  if (editorRef.value.isDirty()) {
+    const confirmed = window.confirm(
+      'У вас есть несохранённые изменения в текущем контексте. Переключиться без сохранения?'
+    )
+    if (!confirmed) return
+  }
+  // Если изменений нет или пользователь подтвердил — переключаем
+  selectedContext.value = newContext
 }
 
 const loadDialplan = async () => {
@@ -156,14 +175,44 @@ const loadDialplan = async () => {
 const saveContext = async (updatedRows: DialplanRowUpdate[]) => {
   if (!selectedInstanceId.value || !selectedContext.value) return
   try {
-    await dialplanApi.updateContext(selectedInstanceId.value, selectedContext.value, {
-      filename: 'extensions.conf',
-      rows: updatedRows,
-      change_author: 'user',
-      reload_asterisk: false,
+    const response = await dialplanApi.updateContext(
+      selectedInstanceId.value,
+      selectedContext.value,
+      {
+        filename: 'extensions.conf',
+        rows: updatedRows,
+        change_author: 'user',
+        reload_asterisk: false,
+      }
+    )
+
+    // Если сервер возвращает актуальные строки – используем их
+    if (response?.rows) {
+      contextsMap.value[selectedContext.value] = response.rows
+    } else {
+      // Иначе обновляем локально, сохраняя идентификаторы из старых строк
+      const oldRows = contextsMap.value[selectedContext.value] || []
+      const newRows: DialplanRowResponse[] = updatedRows.map((updateRow) => {
+        const oldRow = oldRows.find(
+          r => r.var_name === updateRow.var_name && r.var_metric === updateRow.var_metric
+        )
+        return {
+          id: oldRow?.id ?? 0,
+          category: updateRow.category,
+          var_name: updateRow.var_name,
+          var_val: updateRow.var_val,
+          var_metric: updateRow.var_metric,
+          cat_metric: updateRow.cat_metric,
+          commented: updateRow.commented,
+        } as DialplanRowResponse
+      })
+      contextsMap.value[selectedContext.value] = newRows
+    }
+
+    toast.addToast({
+      message: `Контекст "${selectedContext.value}" сохранён`,
+      type: 'success',
     })
-    toast.addToast({ message: `Контекст "${selectedContext.value}" сохранён`, type: 'success' })
-    await loadDialplan()
   } catch (err: unknown) {
     let msg = 'Ошибка сохранения контекста'
     if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
@@ -213,7 +262,7 @@ const openNewContextModal = () => {
   showNewContextModal.value = true
 }
 
-const createNewContext = () => {
+const createNewContext = async () => {
   const name = newContextName.value.trim()
   if (!name) {
     toast.addToast({ message: 'Имя контекста не может быть пустым', type: 'warning' })
@@ -223,10 +272,20 @@ const createNewContext = () => {
     toast.addToast({ message: 'Контекст с таким именем уже существует', type: 'warning' })
     return
   }
-  contextsMap.value[name] = []
-  selectedContext.value = name
-  showNewContextModal.value = false
-  toast.addToast({ message: `Создан пустой контекст "${name}". Добавьте строки.`, type: 'info' })
+  try {
+    // Создаём контекст на сервере
+    await dialplanApi.createContext(selectedInstanceId.value, name)
+    // Добавляем локально
+    contextsMap.value[name] = []
+    selectedContext.value = name
+    showNewContextModal.value = false
+    toast.addToast({ message: `Контекст "${name}" создан`, type: 'success' })
+  } catch (err: unknown) {
+    let msg = 'Ошибка создания контекста'
+    if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
+    else if (err instanceof Error) msg = err.message
+    toast.addToast({ message: msg, type: 'error' })
+  }
 }
 
 watch(selectedInstanceId, () => {

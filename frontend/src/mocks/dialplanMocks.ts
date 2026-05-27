@@ -1,6 +1,5 @@
 import type { DialplanRowResponse, DialplanRowUpdate, DialplanResponse } from '@/types/dialplan'
 
-// Базовая структура для тестового инстанса
 const defaultRows: DialplanRowResponse[] = [
   {
     id: 1,
