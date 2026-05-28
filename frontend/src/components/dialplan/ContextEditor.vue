@@ -30,10 +30,10 @@
           <template #item="{ element, index }">
             <div class="draggable-item">
               <div
-                  class="row-item"
-                  :class="{ 'row-error': element.validationError }"
-                  :data-temp-id="element.tempId"
-                >
+                class="row-item"
+                :class="{ 'row-error': element.validationError }"
+                :data-temp-id="element.tempId"
+              >
                 <span class="drag-handle">⋮⋮</span>
                 <div class="type-col">
                   <CustomSelect
@@ -114,15 +114,14 @@ import CustomInput from '@/components/UI/CustomInput.vue'
 import CustomSelect from '@/components/UI/CustomSelect.vue'
 import type { DialplanRowResponse, DialplanRowUpdate } from '@/types/dialplan'
 
-// Типы строк
 const typeOptions = [
   { value: 'exten', label: 'exten' },
   { value: 'include', label: 'include' },
   { value: 'switch', label: 'switch' },
 ]
 
-// Функции для exten
-const appOptions = [
+// Реактивный список функций, чтобы можно было добавлять нестандартные
+const appOptions = ref([
   { value: 'Dial', label: 'Dial' },
   { value: 'NoOp', label: 'NoOp' },
   { value: 'Hangup', label: 'Hangup' },
@@ -136,7 +135,7 @@ const appOptions = [
   { value: 'Set', label: 'Set' },
   { value: 'Gosub', label: 'Gosub' },
   { value: 'Return', label: 'Return' },
-]
+])
 
 const argsPlaceholders: Record<string, string> = {
   Dial: 'Пример: SIP/101,20,tr',
@@ -154,7 +153,6 @@ const argsPlaceholders: Record<string, string> = {
   Return: '',
 }
 
-// Интерфейс строки редактора
 interface RowItem {
   tempId: number
   type: 'exten' | 'include' | 'switch'
@@ -179,10 +177,17 @@ const emit = defineEmits<{
 const localRows = ref<RowItem[]>([])
 const originalRows = ref<RowItem[]>([])
 
-// Преобразование API-строк в наш формат
+// Добавление недостающей функции в appOptions
+const ensureAppOption = (appName: string) => {
+  if (appName && !appOptions.value.some(opt => opt.value === appName)) {
+    appOptions.value.push({ value: appName, label: appName })
+  }
+}
+
 const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
-  return apiRows.map((row, idx) => {
-    if (row.commented === 1) return null
+  const result: RowItem[] = []
+  for (const row of apiRows) {
+    if (row.commented === 1) continue
 
     if (row.var_name === 'exten') {
       const val = row.var_val
@@ -219,8 +224,10 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
         useParens = false
       }
 
-      return {
-        tempId: row.id || Date.now() + idx,
+      if (app) ensureAppOption(app)
+
+      result.push({
+        tempId: row.id || Date.now() + result.length,
         type: 'exten',
         priority,
         app: app || 'NoOp',
@@ -229,10 +236,10 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
         switchPattern: '',
         validationError: null,
         useParens,
-      }
+      })
     } else if (row.var_name === 'include') {
-      return {
-        tempId: row.id || Date.now() + idx,
+      result.push({
+        tempId: row.id || Date.now() + result.length,
         type: 'include',
         priority: 0,
         app: '',
@@ -241,10 +248,10 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
         switchPattern: '',
         validationError: null,
         useParens: false,
-      }
+      })
     } else if (row.var_name === 'switch') {
-      return {
-        tempId: row.id || Date.now() + idx,
+      result.push({
+        tempId: row.id || Date.now() + result.length,
         type: 'switch',
         priority: 0,
         app: '',
@@ -253,13 +260,12 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
         switchPattern: row.var_val,
         validationError: null,
         useParens: false,
-      }
+      })
     }
-    return null
-  }).filter(Boolean) as RowItem[]
+  }
+  return result
 }
 
-// Преобразование в API-формат
 const convertRowsToApi = (rows: RowItem[]): DialplanRowUpdate[] => {
   return rows.map((row, idx): DialplanRowUpdate => {
     let varName = ''
@@ -289,7 +295,7 @@ const convertRowsToApi = (rows: RowItem[]): DialplanRowUpdate[] => {
   })
 }
 
-// Валидация строки
+// Валидация...
 const validateRow = (row: RowItem) => {
   row.validationError = null
   if (row.type === 'exten') {
@@ -315,7 +321,6 @@ const validateRow = (row: RowItem) => {
 const argsPlaceholder = (app: string) => argsPlaceholders[app] || 'Введите аргументы'
 
 const onTypeChange = (row: RowItem) => {
-  // Сброс значений при смене типа
   if (row.type === 'exten') {
     row.priority = row.priority || 1
     row.app = row.app || 'NoOp'
@@ -336,27 +341,21 @@ watch(() => props.rows, (newRows) => {
   }
   const converted = convertApiToRows(newRows)
   localRows.value = converted
-  // глубокая копия для эталона
   originalRows.value = JSON.parse(JSON.stringify(converted))
 }, { immediate: true })
 
-// проверка, отличается ли текущее состояние от исходного
 const isDirty = (): boolean => {
   const removeTempId = (rows: RowItem[]) =>
     rows.map((row) => {
-      const { ...cleanRow } = row
-      delete cleanRow.tempId
+      const { tempId, ...cleanRow } = row
       return cleanRow
     })
-
   const currentClean = removeTempId(localRows.value)
   const originalClean = removeTempId(originalRows.value)
   return JSON.stringify(currentClean) !== JSON.stringify(originalClean)
 }
 
-// делаем метод доступным родителю
 defineExpose({ isDirty })
-
 
 const addRow = () => {
   const newPriority = localRows.value.filter(r => r.type === 'exten').length + 1
@@ -372,7 +371,6 @@ const addRow = () => {
     validationError: null,
     useParens: false,
   })
-
   nextTick(() => {
     const input = document.querySelector(
       `[data-temp-id="${newId}"] .priority-input input`
@@ -384,12 +382,9 @@ const addRow = () => {
 const removeRow = (index: number) => {
   if (confirm('Удалить эту строку?')) {
     localRows.value.splice(index, 1)
-    // Пересчёт приоритетов только для exten
     let prio = 1
     localRows.value.forEach(row => {
-      if (row.type === 'exten') {
-        row.priority = prio++
-      }
+      if (row.type === 'exten') row.priority = prio++
     })
   }
 }
@@ -397,14 +392,11 @@ const removeRow = (index: number) => {
 const onDragEnd = () => {
   let prio = 1
   localRows.value.forEach(row => {
-    if (row.type === 'exten') {
-      row.priority = prio++
-    }
+    if (row.type === 'exten') row.priority = prio++
   })
 }
 
 const saveChanges = () => {
-  // Валидация всех строк
   let valid = true
   localRows.value.forEach(row => {
     if (!validateRow(row)) valid = false

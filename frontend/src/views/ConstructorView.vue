@@ -175,44 +175,14 @@ const loadDialplan = async () => {
 const saveContext = async (updatedRows: DialplanRowUpdate[]) => {
   if (!selectedInstanceId.value || !selectedContext.value) return
   try {
-    const response = await dialplanApi.updateContext(
-      selectedInstanceId.value,
-      selectedContext.value,
-      {
-        filename: 'extensions.conf',
-        rows: updatedRows,
-        change_author: 'user',
-        reload_asterisk: false,
-      }
-    )
-
-    // Если сервер возвращает актуальные строки – используем их
-    if (response?.rows) {
-      contextsMap.value[selectedContext.value] = response.rows
-    } else {
-      // Иначе обновляем локально, сохраняя идентификаторы из старых строк
-      const oldRows = contextsMap.value[selectedContext.value] || []
-      const newRows: DialplanRowResponse[] = updatedRows.map((updateRow) => {
-        const oldRow = oldRows.find(
-          r => r.var_name === updateRow.var_name && r.var_metric === updateRow.var_metric
-        )
-        return {
-          id: oldRow?.id ?? 0,
-          category: updateRow.category,
-          var_name: updateRow.var_name,
-          var_val: updateRow.var_val,
-          var_metric: updateRow.var_metric,
-          cat_metric: updateRow.cat_metric,
-          commented: updateRow.commented,
-        } as DialplanRowResponse
-      })
-      contextsMap.value[selectedContext.value] = newRows
-    }
-
-    toast.addToast({
-      message: `Контекст "${selectedContext.value}" сохранён`,
-      type: 'success',
+    await dialplanApi.updateContext(selectedInstanceId.value, selectedContext.value, {
+      filename: 'extensions.conf',
+      rows: updatedRows,
+      change_author: 'user',
+      reload_asterisk: false,
     })
+    toast.addToast({ message: `Контекст "${selectedContext.value}" сохранён`, type: 'success' })
+    await loadDialplan() // перезагружаем весь диалплан
   } catch (err: unknown) {
     let msg = 'Ошибка сохранения контекста'
     if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
@@ -223,6 +193,7 @@ const saveContext = async (updatedRows: DialplanRowUpdate[]) => {
 
 const saveAllChanges = async () => {
   if (!selectedInstanceId.value) return
+  // Собираем все строки из актуальных данных contextsMap
   const allUpdatedRows: DialplanRowUpdate[] = []
   for (const ctx in contextsMap.value) {
     const rows = contextsMap.value[ctx]
@@ -246,7 +217,7 @@ const saveAllChanges = async () => {
       reload_asterisk: true,
     })
     toast.addToast({ message: 'Весь диалплан сохранён и перезагружен', type: 'success' })
-    await loadDialplan()
+    await loadDialplan() // синхронизация
   } catch (err: unknown) {
     let msg = 'Ошибка сохранения диалплана'
     if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
@@ -262,7 +233,7 @@ const openNewContextModal = () => {
   showNewContextModal.value = true
 }
 
-const createNewContext = async () => {
+const createNewContext = () => {
   const name = newContextName.value.trim()
   if (!name) {
     toast.addToast({ message: 'Имя контекста не может быть пустым', type: 'warning' })
@@ -272,20 +243,11 @@ const createNewContext = async () => {
     toast.addToast({ message: 'Контекст с таким именем уже существует', type: 'warning' })
     return
   }
-  try {
-    // Создаём контекст на сервере
-    await dialplanApi.createContext(selectedInstanceId.value, name)
-    // Добавляем локально
-    contextsMap.value[name] = []
-    selectedContext.value = name
-    showNewContextModal.value = false
-    toast.addToast({ message: `Контекст "${name}" создан`, type: 'success' })
-  } catch (err: unknown) {
-    let msg = 'Ошибка создания контекста'
-    if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
-    else if (err instanceof Error) msg = err.message
-    toast.addToast({ message: msg, type: 'error' })
-  }
+  // Добавляем пустой контекст локально
+  contextsMap.value[name] = []
+  selectedContext.value = name
+  showNewContextModal.value = false
+  toast.addToast({ message: `Контекст "${name}" создан`, type: 'success' })
 }
 
 watch(selectedInstanceId, () => {
