@@ -3,7 +3,6 @@
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h3>Записи голосовой почты: {{ mailbox }}</h3>
-        <button class="close-btn" @click="close">&times;</button>
       </div>
       <div class="modal-body">
         <div v-if="loading" class="loading-state">Загрузка записей...</div>
@@ -16,9 +15,7 @@
               <span class="recording-duration">{{ formatDuration(rec.duration_sec) }}</span>
             </div>
             <div class="recording-actions">
-              <CustomButton size="sm" variant="outline" @click="playRecording(rec)">
-                🎧 Слушать
-              </CustomButton>
+              <CustomButton size="sm" variant="outline" @click="playRecording(rec)">Слушать</CustomButton>
             </div>
           </div>
         </div>
@@ -34,7 +31,6 @@
     <div class="player-modal" @click.stop>
       <div class="player-header">
         <h4>Прослушивание: {{ currentRecording?.name }}</h4>
-        <button class="close-btn" @click="showPlayer = false">&times;</button>
       </div>
       <div class="player-body">
         <audio controls autoplay :src="playerUrl" class="audio-player" />
@@ -117,42 +113,12 @@ const playRecording = async (rec: VoicemailRecording) => {
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
+.modal-footer,
+.player-footer {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-content, .player-modal {
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.recording-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border);
-}
-.recording-info {
-  display: flex;
-  gap: var(--spacing-md);
-}
-.player-modal {
-  max-width: 500px;
-}
-.audio-player {
-  width: 100%;
+  justify-content: flex-end;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
 }
 </style>

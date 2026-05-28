@@ -3,7 +3,6 @@
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h3>{{ editing ? 'Редактирование ящика' : 'Создание ящика' }}</h3>
-        <button class="close-btn" @click="close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -130,42 +129,12 @@ const save = async () => {
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
+.modal-footer {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-content, .player-modal {
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.recording-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border);
-}
-.recording-info {
-  display: flex;
-  gap: var(--spacing-md);
-}
-.player-modal {
-  max-width: 500px;
-}
-.audio-player {
-  width: 100%;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
 }
 </style>

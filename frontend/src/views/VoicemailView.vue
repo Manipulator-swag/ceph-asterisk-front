@@ -83,25 +83,28 @@
 
     <!-- Модальное окно создания/редактирования -->
     <VoicemailFormModal
+      v-if="selectedInstanceId"
       :show="showFormModal"
-      :instance-id="selectedInstanceId!"
+      :instance-id="selectedInstanceId"
       :editing="!!editingBox"
       :initial-data="editingBox || undefined"
       @close="onFormClose"
     />
-
+    
     <!-- Модальное окно просмотра записей -->
     <VoicemailRecordingsModal
+      v-if="selectedInstanceId"
       :show="showRecordingsModal"
-      :instance-id="selectedInstanceId!"
+      :instance-id="selectedInstanceId"
       :mailbox="recordingsMailbox"
       @close="showRecordingsModal = false"
     />
-
+    
     <!-- Модальное окно привязки пользователя -->
     <VoicemailUserBindingModal
+      v-if="selectedInstanceId"
       :show="showBindingModal"
-      :instance-id="selectedInstanceId!"
+      :instance-id="selectedInstanceId"
       :mailbox="bindingMailbox"
       :users="sipUsers"
       :current-binding-user-id="boundUsersMap[bindingMailbox]"
@@ -125,7 +128,9 @@ import type { VoicemailBox } from '@/types/voicemail'
 import type { SIPUserFromAPI } from '@/types/vats'
 import { useToastStore } from '@/stores/toast'
 import axios from 'axios'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const toast = useToastStore()
 
 // Состояния
@@ -270,8 +275,26 @@ watch(selectedInstanceId, () => {
   }
 })
 
-onMounted(() => {
-  loadInstances()
+onMounted(async () => {
+  await loadInstances()
+  if (route.query.instanceId) {
+    selectedInstanceId.value = Number(route.query.instanceId)
+    await loadBoxes()
+    if (route.query.mailbox) {
+      const mailbox = route.query.mailbox as string
+      // Найти ящик с таким mailbox
+      const found = boxes.value.find(b => b.mailbox === mailbox)
+      if (found) {
+        // Опционально: автоматически открыть записи этого ящика
+        openRecordings(found)
+      } else {
+        // Или просто переключить контекст на нужный ящик в таблице
+      }
+    }
+  } else {
+    // Если нет параметра, грузим как обычно
+    await loadInstances()
+  }
 })
 </script>
 
