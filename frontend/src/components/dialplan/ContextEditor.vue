@@ -15,6 +15,7 @@
         <div class="row-item header-row">
           <div class="drag-placeholder"></div>
           <div class="type-col">Тип</div>
+          <div class="ext-col">Номер</div>
           <div class="priority-col">Приоритет</div>
           <div class="app-col">Функция / Контекст</div>
           <div class="args-col">Аргументы / Значение</div>
@@ -41,6 +42,16 @@
                     :options="typeOptions"
                     class="type-select"
                     @update:modelValue="onTypeChange(element)"
+                  />
+                </div>
+                <div class="ext-col">
+                  <CustomInput
+                    v-if="element.type === 'exten'"
+                    v-model="element.extension"
+                    :with-icon="false"
+                    placeholder="Номер"
+                    class="ext-input"
+                    @blur="validateRow(element)"
                   />
                 </div>
                 <div class="priority-col">
@@ -156,6 +167,7 @@ const argsPlaceholders: Record<string, string> = {
 interface RowItem {
   tempId: number
   type: 'exten' | 'include' | 'switch'
+  extension: string
   priority: number
   app: string
   args: string
@@ -190,14 +202,15 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
     if (row.commented === 1) continue
     if (row.var_name === 'exten') {
       const val = row.var_val
-      const commaIndex = val.indexOf(',')
-      if (commaIndex === -1) continue // неверный формат, пропускаем
-      const priority = parseInt(val.substring(0, commaIndex), 10) || 1
-      const rest = val.substring(commaIndex + 1)
-      // Ищем скобки для функции
-      const parenOpen = rest.indexOf('(')
+      const parts = val.split(',')
+      if (parts.length < 3) continue
+      const extension = parts[0]
+      const priority = parseInt(parts[1], 10)
+      const rest = parts.slice(2).join(',') // application(...) или application,args
+        
       let app = ''
       let args = ''
+      const parenOpen = rest.indexOf('(')
       if (parenOpen !== -1) {
         app = rest.substring(0, parenOpen)
         const parenClose = rest.indexOf(')', parenOpen)
@@ -207,21 +220,26 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
           args = rest.substring(parenOpen + 1)
         }
       } else {
-        // Если скобок нет, всё содержимое после запятой — это функция (без аргументов)
-        app = rest
-        args = ''
+        const commaIndex = rest.indexOf(',')
+        if (commaIndex !== -1) {
+          app = rest.substring(0, commaIndex)
+          args = rest.substring(commaIndex + 1)
+        } else {
+          app = rest
+        }
       }
       if (app) ensureAppOption(app)
       result.push({
         tempId: row.id || Date.now() + result.length,
         type: 'exten',
+        extension,
         priority,
         app: app || 'NoOp',
         args,
         includeContext: '',
         switchPattern: '',
         validationError: null,
-        useParens: true, // всегда используем скобки при сохранении
+        useParens: true,
       })
     } else if (row.var_name === 'include') {
       result.push({
@@ -258,8 +276,7 @@ const convertRowsToApi = (rows: RowItem[]): DialplanRowUpdate[] => {
     let varVal = ''
     if (row.type === 'exten') {
       varName = 'exten'
-      // Всегда используем формат с круглыми скобками
-      varVal = `${row.priority},${row.app}(${row.args})`
+      varVal = `${row.extension},${row.priority},${row.app}(${row.args})`
     } else if (row.type === 'include') {
       varName = 'include'
       varVal = row.includeContext
@@ -284,17 +301,18 @@ const addRow = () => {
   localRows.value.push({
     tempId: newId,
     type: 'exten',
+    extension: '',
     priority: newPriority,
     app: 'NoOp',
     args: '',
     includeContext: '',
     switchPattern: '',
     validationError: null,
-    useParens: true, // всегда скобки
+    useParens: true,
   })
   nextTick(() => {
     const input = document.querySelector(
-      `[data-temp-id="${newId}"] .priority-input input`
+      `[data-temp-id="${newId}"] .ext-input input`
     ) as HTMLInputElement | null
     input?.focus()
   })
@@ -304,7 +322,9 @@ const addRow = () => {
 const validateRow = (row: RowItem) => {
   row.validationError = null
   if (row.type === 'exten') {
-    if (!row.priority || row.priority < 1) {
+    if (!row.extension) {
+      row.validationError = 'Укажите номер (extension)'
+    } else if (!row.priority || row.priority < 1) {
       row.validationError = 'Приоритет должен быть ≥ 1'
     } else if (!row.app) {
       row.validationError = 'Выберите функцию'
@@ -396,8 +416,8 @@ const saveChanges = () => {
 
 <style scoped>
 .btn {
-    background-color: var(--color-background-soft);
-    margin-right: 1vw;
+  background-color: var(--color-background-soft);
+  margin-right: 1vw;
 }
 .context-editor {
   border: 1px solid var(--color-border);
@@ -419,12 +439,12 @@ const saveChanges = () => {
   overflow-y: visible;
 }
 .rows-table {
-  min-width: 700px;
+  min-width: 800px;
   padding: var(--spacing-sm);
 }
 .row-item {
   display: grid;
-  grid-template-columns: 30px 100px 90px 1fr 1fr 50px;
+  grid-template-columns: 30px 100px 100px 80px 1fr 1fr 50px;
   gap: var(--spacing-sm);
   align-items: center;
   padding: var(--spacing-xs);
@@ -462,32 +482,28 @@ const saveChanges = () => {
 .drag-placeholder {
   width: 24px;
 }
-.priority-col { grid-column: 3 / 4; }
-.priority-input {
+.type-col { grid-column: 2 / 3; }
+.ext-col { grid-column: 3 / 4; }
+.priority-col { grid-column: 4 / 5; }
+.app-col { grid-column: 5 / 6; }
+.args-col { grid-column: 6 / 7; }
+.action-col { grid-column: 7 / 8; }
+.priority-input, .ext-input {
   width: 100%;
 }
-.type-col { grid-column: 2 / 3; }
 .app-select {
   width: 100%;
 }
-.args-input {
-  width: 100%;
-}
-.app-col { grid-column: 4 / 5; }
-.args-col { grid-column: 5 / 6; }
-.action-col { grid-column: 6 / 7; text-align: center; }
-
 :deep(.custom-select-dropdown) {
   z-index: 2000 !important;
 }
-
 @media (max-width: 768px) {
-  .priority-col { width: 70px; }
-  .app-col { width: 150px; }
-  .args-col { min-width: 150px; }
   .row-item {
-    grid-template-columns: 30px 80px 70px 1fr 1fr 40px;
+    grid-template-columns: 30px 80px 80px 70px 1fr 1fr 40px;
     gap: var(--spacing-xs);
+  }
+  .type-col, .ext-col, .priority-col, .app-col, .args-col, .action-col {
+    min-width: 0;
   }
 }
 </style>
