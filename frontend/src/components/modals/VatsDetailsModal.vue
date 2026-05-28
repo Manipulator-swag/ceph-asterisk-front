@@ -213,6 +213,7 @@
               :loading="loadingNumbers"
               :deleting-number-id="deletingNumberId"
               @delete="deleteNumber"
+              @voicemail="openVoicemail"
             />
           </div>
         </div>
@@ -289,6 +290,20 @@ import type {
   TransportType
 } from '@/types/vats'
 import { useVatsCacheStore } from '@/stores/vatsCache'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const openVoicemail = (mailbox: string) => {
+  if (!props.vatsData?.id) return
+  router.push({
+    name: 'voicemail',
+    query: {
+      instanceId: props.vatsData.id.toString(),
+      mailbox: mailbox,
+    },
+  })
+}
 
 interface Props {
   show: boolean
@@ -553,6 +568,10 @@ const deleteNumber = async (id: string) => {
   } finally {
     deletingNumberId.value = null
   }
+}
+
+const openVoicemail = (mailbox: string) => {
+  router.push({ name: 'voicemail', query: { instanceId: props.vatsData?.id, mailbox } })
 }
 
 // Открытие модалки

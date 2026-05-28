@@ -1,7 +1,7 @@
 <template>
   <div class="internal-numbers-table">
     <div class="overflow-x-auto">
-      <div v-if="loading" class="loading-state">...</div>
+      <div v-if="loading" class="loading-state">Загрузка номеров...</div>
       <template v-else>
         <table class="table">
           <thead>
@@ -10,6 +10,7 @@
               <th>Caller ID</th>
               <th>Тип номера</th>
               <th>SIP-транспорт</th>
+              <th>Голосовая почта</th>
               <th class="text-right">Действия</th>
             </tr>
           </thead>
@@ -27,16 +28,30 @@
                   {{ number.sipTransport?.toUpperCase() }}
                 </CustomBadge>
               </td>
+              <td>
+                <CustomButton size="sm" variant="outline" @click="emit('voicemail', number.number)">
+                  Ящик
+                </CustomButton>
+              </td>
               <td class="text-right">
-                <CustomButton variant="outline" size="sm" @click="handleDelete(number.id)" :disabled="deletingNumberId === number.id">
-                  <span v-if="deletingNumberId === number.id" class="button-loading"><span class="spinner"></span></span>
+                <CustomButton
+                  variant="outline"
+                  size="sm"
+                  @click="emit('delete', number.id)"
+                  :disabled="deletingNumberId === number.id"
+                >
+                  <span v-if="deletingNumberId === number.id" class="button-loading">
+                    <span class="spinner"></span>
+                  </span>
                   <span v-else>Удалить</span>
                 </CustomButton>
               </td>
             </tr>
           </tbody>
         </table>
-        <div v-if="numbers.length === 0" class="text-center py-8 text-gray-500">Нет добавленных внутренних номеров</div>
+        <div v-if="numbers.length === 0" class="text-center py-8 text-gray-500">
+          Нет добавленных внутренних номеров
+        </div>
       </template>
     </div>
   </div>
@@ -54,10 +69,11 @@ interface Props {
 }
 interface Emits {
   (e: 'delete', id: string): void
+  (e: 'voicemail', mailbox: string): void
 }
+
 defineProps<Props>()
 const emit = defineEmits<Emits>()
-const handleDelete = (id: string) => emit('delete', id)
 </script>
 
 <style scoped>

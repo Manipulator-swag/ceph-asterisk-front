@@ -95,6 +95,7 @@ const menuItems: MenuItem[] = [
   { id: 'constructor', main: 'Конструктор', sub: '', route: '/constructor' },
   { id: 'config-history', main: 'История конфигов', sub: '', route: '/config-history' },
   { id: 'queues', main: 'Очереди', sub: '', route: '/queues' },
+  { id: 'voicemail', main: 'Голосовая почта', sub: '', route: '/voicemail' },
 ]
 
 // Проверка размера экрана

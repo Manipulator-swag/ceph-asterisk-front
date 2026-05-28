@@ -52,6 +52,12 @@ const router = createRouter({
       name: 'queues',
       component: () => import('@/views/QueuesView.vue'),
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/voicemail',
+      name: 'voicemail',
+      component: () => import('@/views/VoicemailView.vue'),
+      meta: { requiresAuth: true },
     }
   ],
 })

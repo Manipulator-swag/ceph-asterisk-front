@@ -7,7 +7,7 @@ const defaultRows: DialplanRowResponse[] = [
     var_metric: 1,
     category: 'default',
     var_name: 'exten',
-    var_val: '1,NoOp,Incoming call',
+    var_val: '100,1,NoOp(Incoming call)',   // исправлено
     commented: 0,
   },
   {
@@ -16,7 +16,7 @@ const defaultRows: DialplanRowResponse[] = [
     var_metric: 2,
     category: 'default',
     var_name: 'exten',
-    var_val: '2,Dial,SIP/101,20',
+    var_val: '100,2,Dial(SIP/101,20)',      // исправлено
     commented: 0,
   },
   {
@@ -34,7 +34,7 @@ const defaultRows: DialplanRowResponse[] = [
     var_metric: 1,
     category: 'internal',
     var_name: 'exten',
-    var_val: '1,Answer',
+    var_val: '101,1,Answer()',               // исправлено
     commented: 0,
   },
   {
