@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import CustomButton from '@/components/UI/CustomButton.vue'
 import CustomSelect from '@/components/UI/CustomSelect.vue'
 import { voicemailApi } from '@/api/voicemailApi'
@@ -45,6 +45,15 @@ const userOptions = computed(() => [
   { value: '', label: '-- Выберите --' },
   ...props.users.map(u => ({ value: u.id, label: `${u.id} (${u.name})` })),
 ])
+
+watch(
+  () => [props.show, props.currentBindingUserId, props.mailbox] as const,
+  ([show, bindingUserId]) => {
+    if (show) {
+      selectedUserId.value = bindingUserId || ''
+    }
+  },
+)
 
 const close = () => emit('close', false)
 const bind = async () => {

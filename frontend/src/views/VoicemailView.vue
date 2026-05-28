@@ -122,6 +122,7 @@ import VoicemailFormModal from '@/components/voicemail/VoicemailFormModal.vue'
 import VoicemailRecordingsModal from '@/components/voicemail/VoicemailRecordingsModal.vue'
 import VoicemailUserBindingModal from '@/components/voicemail/VoicemailUserBindingModal.vue'
 import { voicemailApi } from '@/api/voicemailApi'
+import { getVoicemailBoxByUserId } from '@/api/voicemailHelpers'
 import { vatsApi } from '@/api/vatsApi'
 import type { VatsInstanceFromAPI } from '@/types/vats'
 import type { VoicemailBox } from '@/types/voicemail'
@@ -176,22 +177,20 @@ const loadSipUsers = async () => {
   }
 }
 
-// Загрузка привязок (для каждого ящика пытаемся найти пользователя, привязанного к нему)
-// Примечание: API не отдаёт привязку в списке ящиков, поэтому делаем отдельный запрос к getBoxByUserId для каждого пользователя
+// Загрузка привязок: для каждого SIP-пользователя проверяем привязку к ящику
 const loadBoundUsers = async () => {
-  if (!selectedInstanceId.value || sipUsers.value.length === 0) return
-  const map: Record<string, string> = {}
-  for (const user of sipUsers.value) {
-    try {
-      const box = await voicemailApi.getBoxByUserId(selectedInstanceId.value, user.id)
-      if (box && box.mailbox) {
-        map[box.mailbox] = user.id
-      }
-    } catch {
-      // Пользователь не привязан к ящику – игнорируем
-    }
+  if (!selectedInstanceId.value || sipUsers.value.length === 0) {
+    boundUsersMap.value = {}
+    return
   }
-  boundUsersMap.value = map
+  const instanceId = selectedInstanceId.value
+  const entries = await Promise.all(
+    sipUsers.value.map(async (user) => {
+      const box = await getVoicemailBoxByUserId(instanceId, user.id)
+      return box?.mailbox ? ([box.mailbox, user.id] as const) : null
+    }),
+  )
+  boundUsersMap.value = Object.fromEntries(entries.filter((e): e is readonly [string, string] => e !== null))
 }
 
 // Загрузка списка ящиков
@@ -265,10 +264,18 @@ const onBindingClose = (reload: boolean) => {
   if (reload) loadBoxes()
 }
 
-// Следим за сменой ВАТС
-watch(selectedInstanceId, () => {
-  if (selectedInstanceId.value) {
-    loadBoxes()
+const openMailboxFromQuery = () => {
+  const mailbox = route.query.mailbox as string | undefined
+  if (!mailbox) return
+  const found = boxes.value.find(b => b.mailbox === mailbox)
+  if (found) openRecordings(found)
+}
+
+// Следим за сменой ВАТС (один вызов loadBoxes, без дубля в onMounted)
+watch(selectedInstanceId, async (id) => {
+  if (id) {
+    await loadBoxes()
+    openMailboxFromQuery()
   } else {
     boxes.value = []
     boundUsersMap.value = {}
@@ -279,21 +286,6 @@ onMounted(async () => {
   await loadInstances()
   if (route.query.instanceId) {
     selectedInstanceId.value = Number(route.query.instanceId)
-    await loadBoxes()
-    if (route.query.mailbox) {
-      const mailbox = route.query.mailbox as string
-      // Найти ящик с таким mailbox
-      const found = boxes.value.find(b => b.mailbox === mailbox)
-      if (found) {
-        // Опционально: автоматически открыть записи этого ящика
-        openRecordings(found)
-      } else {
-        // Или просто переключить контекст на нужный ящик в таблице
-      }
-    }
-  } else {
-    // Если нет параметра, грузим как обычно
-    await loadInstances()
   }
 })
 </script>

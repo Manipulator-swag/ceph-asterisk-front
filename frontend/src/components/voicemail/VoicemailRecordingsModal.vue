@@ -83,9 +83,20 @@ const loadRecordings = async () => {
   }
 }
 
-watch(() => props.show, (newVal) => {
-  if (newVal) loadRecordings()
-})
+watch(
+  () => [props.show, props.mailbox, props.instanceId] as const,
+  ([show]) => {
+    if (show) loadRecordings()
+    else {
+      recordings.value = []
+      showPlayer.value = false
+      if (playerUrl.value) {
+        URL.revokeObjectURL(playerUrl.value)
+        playerUrl.value = ''
+      }
+    }
+  },
+)
 
 const close = () => emit('close')
 

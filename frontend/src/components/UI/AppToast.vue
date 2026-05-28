@@ -51,7 +51,7 @@ const { removeToast } = toastStore
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: var(--z-modal, 1000);
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   gap: 12px;

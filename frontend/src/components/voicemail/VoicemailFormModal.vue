@@ -71,7 +71,7 @@ const form = reactive<VoicemailCreate & { mailbox: string; password: string; ful
   link_endpoint_mwi: true,
 })
 
-watch(() => props.initialData, (data) => {
+const resetFormFromData = (data: VoicemailBox | null | undefined) => {
   if (data) {
     form.mailbox = data.mailbox
     form.password = data.password
@@ -86,7 +86,14 @@ watch(() => props.initialData, (data) => {
     form.context = 'default'
     form.link_endpoint_mwi = true
   }
-}, { immediate: true })
+}
+
+watch(
+  () => [props.show, props.initialData] as const,
+  ([show, data]) => {
+    if (show) resetFormFromData(data)
+  },
+)
 
 const close = () => emit('close', false)
 const save = async () => {
