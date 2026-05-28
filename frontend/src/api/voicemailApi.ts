@@ -83,10 +83,11 @@ export const voicemailApi = {
     folder: string = 'INBOX',
     context: string = 'default'
   ): Promise<string> {
-    // Используем прямой endpoint, который отдаёт файл
-    const url = `/instances/${instanceId}/voicemail/${mailbox}/recordings/file/${filename}?folder=${folder}&context=${context}`
-    // Возвращаем полный URL (предполагая, что бэкенд отдаёт файл, и авторизация через токен)
-    return axiosInstance.defaults.baseURL + url
+    // Извлекаем только имя файла (удаляем возможный путь)
+    const cleanFilename = filename.split('/').pop() || filename
+    const url = `/instances/${instanceId}/voicemail/${mailbox}/recordings/file/${cleanFilename}?folder=${folder}&context=${context}`
+    // Для воспроизведения через blob лучше вернуть полный URL с базовым адресом
+    return `${axiosInstance.defaults.baseURL}${url}`
   },
 
   // Привязать пользователя к ящику

@@ -68,7 +68,11 @@ const loadRecordings = async () => {
   if (!props.instanceId || !props.mailbox) return
   loading.value = true
   try {
-    recordings.value = await voicemailApi.getRecordings(props.instanceId, props.mailbox)
+    const data = await voicemailApi.getRecordings(props.instanceId, props.mailbox)
+    recordings.value = data.map(rec => ({
+      ...rec,
+      name: rec.name.split('/').pop() || rec.name,
+    }))
   } catch (err: unknown) {
     let msg = 'Ошибка загрузки записей'
     if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
