@@ -570,10 +570,6 @@ const deleteNumber = async (id: string) => {
   }
 }
 
-const openVoicemail = (mailbox: string) => {
-  router.push({ name: 'voicemail', query: { instanceId: props.vatsData?.id, mailbox } })
-}
-
 // Открытие модалки
 watch(
   () => props.show,
