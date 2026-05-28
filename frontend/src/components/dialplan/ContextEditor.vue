@@ -188,24 +188,17 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
   const result: RowItem[] = []
   for (const row of apiRows) {
     if (row.commented === 1) continue
-
     if (row.var_name === 'exten') {
       const val = row.var_val
-      const firstComma = val.indexOf(',')
-      let priority = 1
-      let rest = val
-      if (firstComma !== -1) {
-        priority = parseInt(val.substring(0, firstComma), 10) || 1
-        rest = val.substring(firstComma + 1)
-      }
-
+      const commaIndex = val.indexOf(',')
+      if (commaIndex === -1) continue // неверный формат, пропускаем
+      const priority = parseInt(val.substring(0, commaIndex), 10) || 1
+      const rest = val.substring(commaIndex + 1)
+      // Ищем скобки для функции
+      const parenOpen = rest.indexOf('(')
       let app = ''
       let args = ''
-      let useParens = false
-      const parenOpen = rest.indexOf('(')
-
       if (parenOpen !== -1) {
-        useParens = true
         app = rest.substring(0, parenOpen)
         const parenClose = rest.indexOf(')', parenOpen)
         if (parenClose !== -1) {
@@ -214,18 +207,11 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
           args = rest.substring(parenOpen + 1)
         }
       } else {
-        const secondComma = rest.indexOf(',')
-        if (secondComma !== -1) {
-          app = rest.substring(0, secondComma)
-          args = rest.substring(secondComma + 1)
-        } else {
-          app = rest
-        }
-        useParens = false
+        // Если скобок нет, всё содержимое после запятой — это функция (без аргументов)
+        app = rest
+        args = ''
       }
-
       if (app) ensureAppOption(app)
-
       result.push({
         tempId: row.id || Date.now() + result.length,
         type: 'exten',
@@ -235,7 +221,7 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
         includeContext: '',
         switchPattern: '',
         validationError: null,
-        useParens,
+        useParens: true, // всегда используем скобки при сохранении
       })
     } else if (row.var_name === 'include') {
       result.push({
@@ -272,11 +258,8 @@ const convertRowsToApi = (rows: RowItem[]): DialplanRowUpdate[] => {
     let varVal = ''
     if (row.type === 'exten') {
       varName = 'exten'
-      if (row.useParens) {
-        varVal = `${row.priority},${row.app}(${row.args})`
-      } else {
-        varVal = `${row.priority},${row.app}${row.args ? ',' + row.args : ''}`
-      }
+      // Всегда используем формат с круглыми скобками
+      varVal = `${row.priority},${row.app}(${row.args})`
     } else if (row.type === 'include') {
       varName = 'include'
       varVal = row.includeContext
@@ -292,6 +275,28 @@ const convertRowsToApi = (rows: RowItem[]): DialplanRowUpdate[] => {
       var_val: varVal,
       commented: 0,
     }
+  })
+}
+
+const addRow = () => {
+  const newPriority = localRows.value.filter(r => r.type === 'exten').length + 1
+  const newId = Date.now()
+  localRows.value.push({
+    tempId: newId,
+    type: 'exten',
+    priority: newPriority,
+    app: 'NoOp',
+    args: '',
+    includeContext: '',
+    switchPattern: '',
+    validationError: null,
+    useParens: true, // всегда скобки
+  })
+  nextTick(() => {
+    const input = document.querySelector(
+      `[data-temp-id="${newId}"] .priority-input input`
+    ) as HTMLInputElement | null
+    input?.focus()
   })
 }
 
@@ -356,28 +361,6 @@ const isDirty = (): boolean => {
 }
 
 defineExpose({ isDirty })
-
-const addRow = () => {
-  const newPriority = localRows.value.filter(r => r.type === 'exten').length + 1
-  const newId = Date.now()
-  localRows.value.push({
-    tempId: newId,
-    type: 'exten',
-    priority: newPriority,
-    app: 'NoOp',
-    args: '',
-    includeContext: '',
-    switchPattern: '',
-    validationError: null,
-    useParens: false,
-  })
-  nextTick(() => {
-    const input = document.querySelector(
-      `[data-temp-id="${newId}"] .priority-input input`
-    ) as HTMLInputElement | null
-    input?.focus()
-  })
-}
 
 const removeRow = (index: number) => {
   if (confirm('Удалить эту строку?')) {
