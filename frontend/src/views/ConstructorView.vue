@@ -181,8 +181,17 @@ const saveContext = async (updatedRows: DialplanRowUpdate[]) => {
       change_author: 'user',
       reload_asterisk: false,
     })
+    const newRows: DialplanRowResponse[] = updatedRows.map((row, idx) => ({
+      id: Date.now() + idx,
+      cat_metric: row.cat_metric,
+      var_metric: row.var_metric,
+      category: row.category,
+      var_name: row.var_name,
+      var_val: row.var_val,
+      commented: row.commented,
+    }))
+    contextsMap.value[selectedContext.value] = newRows
     toast.addToast({ message: `Контекст "${selectedContext.value}" сохранён`, type: 'success' })
-    await loadDialplan() // перезагружаем весь диалплан
   } catch (err: unknown) {
     let msg = 'Ошибка сохранения контекста'
     if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message
@@ -193,7 +202,12 @@ const saveContext = async (updatedRows: DialplanRowUpdate[]) => {
 
 const saveAllChanges = async () => {
   if (!selectedInstanceId.value) return
-  // Собираем все строки из актуальных данных contextsMap
+  if (editorRef.value?.isDirty()) {
+    if (confirm('В текущем контексте есть несохранённые изменения. Сохранить его перед сохранением всего диалплана?')) {
+      toast.addToast({ message: 'Сначала сохраните текущий контекст', type: 'warning' })
+      return
+    }
+  }
   const allUpdatedRows: DialplanRowUpdate[] = []
   for (const ctx in contextsMap.value) {
     const rows = contextsMap.value[ctx]
@@ -217,7 +231,6 @@ const saveAllChanges = async () => {
       reload_asterisk: true,
     })
     toast.addToast({ message: 'Весь диалплан сохранён и перезагружен', type: 'success' })
-    await loadDialplan() // синхронизация
   } catch (err: unknown) {
     let msg = 'Ошибка сохранения диалплана'
     if (axios.isAxiosError(err)) msg = err.response?.data?.detail || err.message

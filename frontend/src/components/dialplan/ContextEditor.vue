@@ -47,22 +47,22 @@
                 <div class="ext-col">
                   <CustomInput
                     v-if="element.type === 'exten'"
+                    type="text"
                     v-model="element.extension"
                     :with-icon="false"
-                    placeholder="Номер"
                     class="ext-input"
+                    placeholder="Номер"
                     @blur="validateRow(element)"
                   />
                 </div>
                 <div class="priority-col">
                   <CustomInput
                     v-if="element.type === 'exten'"
-                    type="number"
-                    v-model.number="element.priority"
+                    type="text"
+                    v-model="element.priority"
                     :with-icon="false"
                     class="priority-input"
-                    min="1"
-                    step="1"
+                    placeholder="1 или n"
                     @blur="validateRow(element)"
                   />
                 </div>
@@ -168,7 +168,7 @@ interface RowItem {
   tempId: number
   type: 'exten' | 'include' | 'switch'
   extension: string
-  priority: number
+  priority: string
   app: string
   args: string
   includeContext: string
@@ -205,20 +205,16 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
       const parts = val.split(',')
       if (parts.length < 3) continue
       const extension = parts[0]
-      const priority = parseInt(parts[1], 10)
-      const rest = parts.slice(2).join(',') // application(...) или application,args
-        
+      const priority: string = parts[1]
+      const rest = parts.slice(2).join(',')
+
       let app = ''
       let args = ''
       const parenOpen = rest.indexOf('(')
       if (parenOpen !== -1) {
         app = rest.substring(0, parenOpen)
         const parenClose = rest.indexOf(')', parenOpen)
-        if (parenClose !== -1) {
-          args = rest.substring(parenOpen + 1, parenClose)
-        } else {
-          args = rest.substring(parenOpen + 1)
-        }
+        args = parenClose !== -1 ? rest.substring(parenOpen + 1, parenClose) : rest.substring(parenOpen + 1)
       } else {
         const commaIndex = rest.indexOf(',')
         if (commaIndex !== -1) {
@@ -233,7 +229,7 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
         tempId: row.id || Date.now() + result.length,
         type: 'exten',
         extension,
-        priority,
+        priority,   // строка
         app: app || 'NoOp',
         args,
         includeContext: '',
@@ -245,7 +241,8 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
       result.push({
         tempId: row.id || Date.now() + result.length,
         type: 'include',
-        priority: 0,
+        extension: '',      // не используется
+        priority: '',       // пустая строка
         app: '',
         args: '',
         includeContext: row.var_val,
@@ -257,7 +254,8 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
       result.push({
         tempId: row.id || Date.now() + result.length,
         type: 'switch',
-        priority: 0,
+        extension: '',
+        priority: '',
         app: '',
         args: '',
         includeContext: '',
@@ -296,7 +294,14 @@ const convertRowsToApi = (rows: RowItem[]): DialplanRowUpdate[] => {
 }
 
 const addRow = () => {
-  const newPriority = localRows.value.filter(r => r.type === 'exten').length + 1
+  let maxNumericPriority = 0
+  for (const row of localRows.value) {
+    if (row.type === 'exten' && row.priority !== 'n') {
+      const p = Number(row.priority)
+      if (!isNaN(p) && p > maxNumericPriority) maxNumericPriority = p
+    }
+  }
+  const newPriority = (maxNumericPriority + 1).toString()
   const newId = Date.now()
   localRows.value.push({
     tempId: newId,
@@ -324,8 +329,8 @@ const validateRow = (row: RowItem) => {
   if (row.type === 'exten') {
     if (!row.extension) {
       row.validationError = 'Укажите номер (extension)'
-    } else if (!row.priority || row.priority < 1) {
-      row.validationError = 'Приоритет должен быть ≥ 1'
+    } else if (row.priority !== 'n' && (isNaN(Number(row.priority)) || Number(row.priority) < 1)) {
+      row.validationError = 'Приоритет должен быть числом ≥ 1 или n'
     } else if (!row.app) {
       row.validationError = 'Выберите функцию'
     } else if (row.app === 'Dial' && !row.args.trim()) {
@@ -347,7 +352,8 @@ const argsPlaceholder = (app: string) => argsPlaceholders[app] || 'Введит�
 
 const onTypeChange = (row: RowItem) => {
   if (row.type === 'exten') {
-    row.priority = row.priority || 1
+    row.extension = row.extension || ''
+    row.priority = row.priority || '1'
     row.app = row.app || 'NoOp'
     row.args = row.args || ''
   } else if (row.type === 'include') {
@@ -385,18 +391,25 @@ defineExpose({ isDirty })
 const removeRow = (index: number) => {
   if (confirm('Удалить эту строку?')) {
     localRows.value.splice(index, 1)
-    let prio = 1
-    localRows.value.forEach(row => {
-      if (row.type === 'exten') row.priority = prio++
-    })
+    let prioNum = 1
+    for (const row of localRows.value) {
+      if (row.type === 'exten' && row.priority !== 'n') {
+        row.priority = prioNum.toString()
+        prioNum++
+      }
+    }
   }
 }
 
+
 const onDragEnd = () => {
-  let prio = 1
-  localRows.value.forEach(row => {
-    if (row.type === 'exten') row.priority = prio++
-  })
+  let prioNum = 1
+  for (const row of localRows.value) {
+    if (row.type === 'exten' && row.priority !== 'n') {
+      row.priority = prioNum.toString()
+      prioNum++
+    }
+  }
 }
 
 const saveChanges = () => {
