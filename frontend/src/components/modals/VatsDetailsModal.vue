@@ -280,6 +280,7 @@ import CustomBadge from '@/components/UI/CustomBadge.vue'
 import InternalNumbersTable from '@/components/tables/InternalNumbersTable.vue'
 import axios from 'axios'
 import { vatsApi } from '@/api/vatsApi'
+import { dialplanApi } from '@/api/dialplanApi'
 import { useToastStore } from '@/stores/toast'
 import type {
   VatsTableItem,
@@ -445,13 +446,13 @@ const loadInstanceDetails = async () => {
 }
 
 const loadContexts = async () => {
-  const instanceName = instanceDetails.value?.name || props.vatsData?.name
-  if (!instanceName) return
+  const instanceId = Number(instanceDetails.value?.id ?? props.vatsData?.id)
+  if (!instanceId) return
 
   isLoadingContexts.value = true
   contextsError.value = ''
   try {
-    const contexts = await vatsApi.getContexts(instanceName)
+    const contexts = await dialplanApi.getContexts(instanceId)
     availableContexts.value = contexts
   } catch (error) {
     const message = axios.isAxiosError(error) && error.response?.data?.detail
