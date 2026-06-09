@@ -11,8 +11,11 @@ export interface LogEntry {
   pbx_id: string | number | null
 }
 
+export type LogsTotalRelation = 'eq' | 'gte'
+
 export interface LogsModel {
   status: string
   data: LogEntry[]
   total: number
+  relation: LogsTotalRelation
 }

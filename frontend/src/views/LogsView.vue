@@ -17,6 +17,7 @@ const toast = useToastStore()
 // Состояния
 const logsData = ref<LogEntry[]>([])
 const totalItems = ref(0)
+const totalRelation = ref<'eq' | 'gte'>('eq')
 const isLoading = ref(false)
 const errorMessage = ref('')
 
@@ -84,6 +85,7 @@ const loadLogs = async () => {
     const response = await logsApi.getLogs(params)
     logsData.value = response.data
     totalItems.value = response.total
+    totalRelation.value = response.relation ?? 'eq'
   } catch (err: unknown) {
     let msg = 'Ошибка загрузки логов'
     if (axios.isAxiosError(err)) {
@@ -112,6 +114,13 @@ const hasActiveFilters = computed(() => {
   return (searchText.value ?? '').trim() !== '' ||
          selectedLevel.value !== 'all' ||
          selectedVats.value !== 'all'
+})
+
+const resultsCountText = computed(() => {
+  if (totalRelation.value === 'gte') {
+    return `Найдено ${totalItems.value} записей или больше`
+  }
+  return `Найдено записей: ${totalItems.value}`
 })
 
 // Пагинация
@@ -209,7 +218,7 @@ onMounted(() => {
     </div>
 
     <div class="filter-info">
-      <span class="results-count">Найдено записей: {{ totalItems }}</span>
+      <span class="results-count">{{ resultsCountText }}</span>
       <span v-if="hasActiveFilters" class="active-filters">(активные фильтры)</span>
       <CustomButton
         variant="outline"

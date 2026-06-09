@@ -132,5 +132,6 @@ export const getMockLogs = (
     status: 'success',
     data: items,
     total: allLogs.length,
+    relation: 'eq',
   }
 }
