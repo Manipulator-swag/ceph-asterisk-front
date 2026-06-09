@@ -36,11 +36,15 @@ const isLoadingVats = ref(false)
 const levelOptions = [
   { value: 'all', label: 'Все' },
   { value: 'TUFO', label: 'TUFO' },
-  { value: 'WARN', label: 'WARNING' },   // значение WARN, лейбл WARNING
+  { value: 'WARN', label: 'WARNING' },   // WARN -> WARNING
   { value: 'ERROR', label: 'ERROR' },
   { value: 'DEBUG', label: 'DEBUG' },
   { value: 'NOTICE', label: 'NOTICE' },
   { value: 'UNKNOWN', label: 'UNKNOWN' },
+  { value: 'INFO', label: 'INFO' },
+  { value: 'VERBOSE', label: 'VERBOSE' },
+  { value: 'CRITICAL', label: 'CRITICAL' },
+  { value: 'ALERT', label: 'ALERT' },
 ]
 
 // Загрузка списка ВАТС
@@ -58,7 +62,7 @@ const loadVatsList = async () => {
 const vatsOptions = computed(() => {
   const opts = [{ value: 'all', label: 'Все ВАТС' }]
   vatsList.value.forEach(vats => {
-    opts.push({ value: String(vats.id), label: vats.name })
+    opts.push({ value: vats.name, label: vats.name })
   })
   return opts
 })
@@ -75,7 +79,7 @@ const loadLogs = async () => {
     params.level = selectedLevel.value
   }
   if (selectedVats.value !== 'all') {
-    params.pbx_id = selectedVats.value
+    params.instance_name = selectedVats.value   // имя ВАТС
   }
   const text = searchText.value?.trim()
   if (text) {
