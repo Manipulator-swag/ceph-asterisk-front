@@ -35,16 +35,12 @@ const isLoadingVats = ref(false)
 // Уровни логов (значения для API)
 const levelOptions = [
   { value: 'all', label: 'Все' },
-  { value: 'TUFO', label: 'TUFO' },
-  { value: 'WARN', label: 'WARNING' },   // WARN -> WARNING
-  { value: 'ERROR', label: 'ERROR' },
   { value: 'DEBUG', label: 'DEBUG' },
-  { value: 'NOTICE', label: 'NOTICE' },
-  { value: 'UNKNOWN', label: 'UNKNOWN' },
-  { value: 'INFO', label: 'INFO' },
   { value: 'VERBOSE', label: 'VERBOSE' },
-  { value: 'CRITICAL', label: 'CRITICAL' },
-  { value: 'ALERT', label: 'ALERT' },
+  { value: 'NOTICE', label: 'NOTICE' },
+  { value: 'WARNING', label: 'WARNING' },
+  { value: 'ERROR', label: 'ERROR' },
+  { value: 'UNKNOWN', label: 'UNKNOWN' },
 ]
 
 // Загрузка списка ВАТС
@@ -79,7 +75,7 @@ const loadLogs = async () => {
     params.level = selectedLevel.value
   }
   if (selectedVats.value !== 'all') {
-    params.instance_name = selectedVats.value   // имя ВАТС
+    params.pbx_id = selectedVats.value
   }
   const text = searchText.value?.trim()
   if (text) {

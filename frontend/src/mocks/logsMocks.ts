@@ -17,8 +17,9 @@ const randomDate = (): string => {
 }
 
 // Уровни логов (веса для случайного выбора)
-const levels = ['TUFO', 'WARN', 'ERROR', 'DEBUG', 'NOTICE', 'UNKNOWN']
-const levelWeights = [0.5, 0.15, 0.1, 0.1, 0.1, 0.05]
+const instanceNames = ['ВАТС-1', 'ВАТС-2', 'ВАТС-3']
+const levels = ['DEBUG', 'VERBOSE', 'NOTICE', 'WARNING', 'ERROR', 'UNKNOWN']
+const levelWeights = [0.15, 0.15, 0.15, 0.25, 0.15, 0.05]
 
 const getRandomLevel = (): string => {
   const rand = Math.random()
@@ -27,12 +28,18 @@ const getRandomLevel = (): string => {
     sum += levelWeights[i]
     if (rand < sum) return levels[i]
   }
-  return 'TUFO'
+  return 'NOTICE'
 }
 
 // Сообщения для разных уровней
 const messagesByLevel: Record<string, string[]> = {
-  TUFO: [
+  DEBUG: [
+    'RTP packet received from 192.168.1.100:5060',
+    'Audio stream established for call ID: 12345',
+    'Parsing config file: extensions.conf',
+    'Dialplan application "Dial" invoked',
+  ],
+  VERBOSE: [
     'SIP/101-00000001 answered SIP/trunk-00000002',
     'New call from +79161234567 to extension 101',
     'Queue call completed: queue-support, time=125s',
@@ -40,7 +47,7 @@ const messagesByLevel: Record<string, string[]> = {
     'Registered SIP peer 105 at 192.168.1.100:5060',
     'Unregistered SIP peer 106',
   ],
-  WARN: [
+  WARNING: [
     'SIP/102 Registration timeout',
     'Type "name" is not defined in table',
     'RTP port range exhausted, using dynamic port',
@@ -51,12 +58,6 @@ const messagesByLevel: Record<string, string[]> = {
     'Database connection lost, attempting reconnect',
     'Cannot allocate memory for RTP session',
     'Invalid configuration file line 42',
-  ],
-  DEBUG: [
-    'RTP packet received from 192.168.1.100:5060',
-    'Audio stream established for call ID: 12345',
-    'Parsing config file: extensions.conf',
-    'Dialplan application "Dial" invoked',
   ],
   NOTICE: [
     'Reloading configuration files',
@@ -82,7 +83,7 @@ const generateMockLogEntry = (id: number): LogEntry => {
       file: Math.random() > 0.7 ? 'asterisk.c' : null,
       message: msgText,   // поле message (было msg)
     },
-    pbx_id: Math.random() > 0.5 ? `pbx-${Math.floor(Math.random() * 10) + 1}` : null,
+    pbx_id: instanceNames[Math.floor(Math.random() * instanceNames.length)],
   }
 }
 

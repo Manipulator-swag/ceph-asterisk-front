@@ -15,7 +15,7 @@
             <td class="cell-timestamp">{{ formatTimestamp(log.message.timestamp) }}</td>
             <td class="cell-level">
               <span class="level-badge" :class="getLevelClass(log.message.level)">
-                {{ displayLevel(log.message.level) }}
+                {{ log.message.level }}
               </span>
             </td>
             <td class="cell-pbx">{{ log.pbx_id || '—' }}</td>
@@ -47,18 +47,13 @@ const formatTimestamp = (ts: string | null): string => {
   })
 }
 
-const displayLevel = (level: string): string => {
-  if (level === 'WARN') return 'WARNING'
-  return level
-}
-
 const getLevelClass = (level: string): string => {
   const classes: Record<string, string> = {
-    TUFO: 'level-tufo',
-    WARN: 'level-warn',
-    ERROR: 'level-error',
     DEBUG: 'level-debug',
+    VERBOSE: 'level-verbose',
     NOTICE: 'level-notice',
+    WARNING: 'level-warn',
+    ERROR: 'level-error',
     UNKNOWN: 'level-unknown',
   }
   return classes[level] || 'level-default'
@@ -125,7 +120,7 @@ const getLevelClass = (level: string): string => {
   color: #7f8c8d;
   border: 1px solid rgba(127,140,141,0.2);
 }
-.level-tufo { background-color: rgba(52, 152, 219, 0.1); color: #3498db; border: 1px solid rgba(52,152,219,0.2); }
+.level-verbose { background-color: rgba(52, 152, 219, 0.1); color: #3498db; border: 1px solid rgba(52,152,219,0.2); }
 .level-warn { background-color: rgba(241, 196, 15, 0.1); color: #f1c40f; border: 1px solid rgba(241,196,15,0.2); }
 .level-error { background-color: rgba(231, 76, 60, 0.1); color: #e74c3c; border: 1px solid rgba(231,76,60,0.2); }
 .level-debug { background-color: rgba(155, 89, 182, 0.1); color: #9b59b6; border: 1px solid rgba(155,89,182,0.2); }
