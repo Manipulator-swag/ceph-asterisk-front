@@ -25,8 +25,8 @@ const getRandomLevel = (): string => {
   const rand = Math.random()
   let sum = 0
   for (let i = 0; i < levelWeights.length; i++) {
-    sum += levelWeights[i]
-    if (rand < sum) return levels[i]
+    sum += levelWeights[i] ?? 0
+    if (rand < sum) return levels[i] ?? 'NOTICE'
   }
   return 'NOTICE'
 }
@@ -73,8 +73,8 @@ const messagesByLevel: Record<string, string[]> = {
 // Генерация одной записи лога (согласно новой спецификации)
 const generateMockLogEntry = (id: number): LogEntry => {
   const level = getRandomLevel()
-  const messages = messagesByLevel[level]
-  const msgText = messages[Math.floor(Math.random() * messages.length)]
+  const messages = messagesByLevel[level] ?? messagesByLevel.NOTICE ?? []
+  const msgText = messages[Math.floor(Math.random() * messages.length)] ?? 'Log message'
   return {
     message: {
       timestamp: randomDate(),
@@ -83,7 +83,7 @@ const generateMockLogEntry = (id: number): LogEntry => {
       file: Math.random() > 0.7 ? 'asterisk.c' : null,
       message: msgText,   // поле message (было msg)
     },
-    pbx_id: instanceNames[Math.floor(Math.random() * instanceNames.length)],
+    pbx_id: instanceNames[Math.floor(Math.random() * instanceNames.length)] ?? 'ВАТС-1',
   }
 }
 

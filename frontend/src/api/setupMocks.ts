@@ -121,7 +121,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   })
   mock.onGet(/\/instances\/\d+\/config\/[^/]+\/history$/).reply((config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/config\/([^/]+)\/history/)
-    if (match) {
+    if (match?.[1] && match[2]) {
       const instanceId = parseInt(match[1], 10)
       const configType = match[2]
       return [200, getMockConfigHistory(instanceId, configType)]
@@ -130,7 +130,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   })
   mock.onGet(/\/instances\/\d+\/config\/[^/]+\/history\/\d+/).reply((config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/config\/([^/]+)\/history\/(\d+)/)
-    if (match) {
+    if (match?.[1] && match[2] && match[3]) {
       const instanceId = parseInt(match[1], 10)
       const configType = match[2]
       const version = parseInt(match[3], 10)
@@ -140,7 +140,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   })
   mock.onPost(/\/instances\/\d+\/config\/[^/]+\/rollback/).reply(async (config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/config\/([^/]+)\/rollback/)
-    if (match) {
+    if (match?.[1] && match[2]) {
       const instanceId = parseInt(match[1], 10)
       const configType = match[2]
       const body = JSON.parse(config.data)
@@ -153,7 +153,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   })
   mock.onGet(/\/instances\/\d+\/config\/[^/]+$/).reply((config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/config\/([^/]+)$/)
-    if (match) {
+    if (match?.[1] && match[2]) {
       const instanceId = parseInt(match[1], 10)
       const configType = match[2]
       return [200, getMockCurrentConfig(instanceId, configType)]
@@ -163,7 +163,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
 
   mock.onGet(/\/instances\/(\d+)\/queues\/$/).reply((config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/queues\/$/)
-    if (match) {
+    if (match?.[1]) {
       const instanceId = parseInt(match[1], 10)
       return [200, getMockQueues(instanceId)]
     }
@@ -171,7 +171,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   })
   mock.onPost(/\/instances\/(\d+)\/queues\/$/).reply(async (config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/queues\/$/)
-    if (match) {
+    if (match?.[1]) {
       const instanceId = parseInt(match[1], 10)
       const body = JSON.parse(config.data) as QueueCreate
       const newQueue = createMockQueue(instanceId, body)
@@ -183,7 +183,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // GET /instances/{instance_id}/queues/{queue_name}
   mock.onGet(/\/instances\/(\d+)\/queues\/([^/]+)$/).reply((config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/queues\/([^/]+)$/)
-    if (match) {
+    if (match?.[1] && match[2]) {
       const instanceId = parseInt(match[1], 10)
       const queueName = decodeURIComponent(match[2])
       const queue = getMockQueue(instanceId, queueName)
@@ -196,7 +196,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // PUT /instances/{instance_id}/queues/{queue_name}
   mock.onPut(/\/instances\/(\d+)\/queues\/([^/]+)$/).reply(async (config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/queues\/([^/]+)$/)
-    if (match) {
+    if (match?.[1] && match[2]) {
       const instanceId = parseInt(match[1], 10)
       const queueName = decodeURIComponent(match[2])
       const body = JSON.parse(config.data) as QueueUpdate
@@ -210,7 +210,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // DELETE /instances/{instance_id}/queues/{queue_name}
   mock.onDelete(/\/instances\/(\d+)\/queues\/([^/]+)$/).reply((config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/queues\/([^/]+)$/)
-    if (match) {
+    if (match?.[1] && match[2]) {
       const instanceId = parseInt(match[1], 10)
       const queueName = decodeURIComponent(match[2])
       const deleted = deleteMockQueue(instanceId, queueName)
@@ -221,7 +221,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   })
   mock.onGet(/\/instances\/(\d+)\/dialplan$/).reply((config) => {
   const match = config.url?.match(/\/instances\/(\d+)\/dialplan/)
-    if (match) {
+    if (match?.[1]) {
       const instanceId = parseInt(match[1], 10)
       const filename = config.params?.filename || 'extensions.conf'
       return [200, getMockDialplan(instanceId, filename)]
@@ -232,7 +232,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // PUT /instances/{instance_id}/dialplan
   mock.onPut(/\/instances\/(\d+)\/dialplan$/).reply(async (config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/dialplan/)
-    if (match) {
+    if (match?.[1]) {
       const instanceId = parseInt(match[1], 10)
       const body = JSON.parse(config.data)
       const updated = updateMockDialplan(instanceId, body)
@@ -244,7 +244,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // GET /instances/{instance_id}/dialplan/contexts
   mock.onGet(/\/instances\/(\d+)\/dialplan\/contexts$/).reply((config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/dialplan\/contexts/)
-    if (match) {
+    if (match?.[1]) {
       const instanceId = parseInt(match[1], 10)
       return [200, getMockContexts(instanceId)]
     }
@@ -254,7 +254,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // GET /instances/{instance_id}/dialplan/{context}
   mock.onGet(/\/instances\/(\d+)\/dialplan\/([^/]+)$/).reply((config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/dialplan\/([^/]+)/)
-    if (match) {
+    if (match?.[1] && match[2]) {
       const instanceId = parseInt(match[1], 10)
       const contextName = decodeURIComponent(match[2])
       return [200, getMockContext(instanceId, contextName)]
@@ -265,7 +265,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // PUT /instances/{instance_id}/dialplan/{context}
   mock.onPut(/\/instances\/(\d+)\/dialplan\/([^/]+)$/).reply(async (config) => {
     const match = config.url?.match(/\/instances\/(\d+)\/dialplan\/([^/]+)/)
-    if (match) {
+    if (match?.[1] && match[2]) {
       const instanceId = parseInt(match[1], 10)
       const contextName = decodeURIComponent(match[2])
       const body = JSON.parse(config.data)

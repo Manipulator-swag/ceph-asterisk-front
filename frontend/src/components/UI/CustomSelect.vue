@@ -68,7 +68,7 @@ interface SelectOption {
 }
 
 interface Props {
-  modelValue?: string | number
+  modelValue?: string | number | null
   options: SelectOption[]
   label?: string
   placeholder?: string
@@ -76,8 +76,8 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: string | number): void
-  (e: 'change', value: string | number): void
+  (e: 'update:modelValue', value: string | number | null): void
+  (e: 'change', value: string | number | null): void
 }
 
 const props = withDefaults(defineProps<Props>(), {

@@ -86,7 +86,7 @@
 import { computed, ref } from 'vue'
 
 interface Props {
-  modelValue: string | number | undefined
+  modelValue: string | number | null | undefined
   label?: string
   placeholder?: string
   type?: string
@@ -95,7 +95,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: string | number | undefined): void
+  (e: 'update:modelValue', value: string | number | null | undefined): void
 }
 
 const props = withDefaults(defineProps<Props>(), {

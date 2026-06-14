@@ -94,7 +94,7 @@ export function addMockAudioFile(file: File): AudioFileSchema {
   const durationSec = 30 // В реальности нужно вычислять, для мока фиксируем
   const sizeKb = file.size / 1024
   const now = new Date()
-  const createDate = now.toISOString().split('T')[0]
+  const createDate = now.toISOString().split('T')[0] ?? now.toISOString().slice(0, 10)
 
   const newFile: MockAudioFile = {
     id: getNextId(),
@@ -106,7 +106,8 @@ export function addMockAudioFile(file: File): AudioFileSchema {
     blob: generateMockWavBlob(durationSec),
   }
   mockFiles.push(newFile)
-  return { ...newFile, blob: undefined as any }
+  const { blob: _blob, ...fileWithoutBlob } = newFile
+  return fileWithoutBlob
 }
 
 // Удалить файл по ID

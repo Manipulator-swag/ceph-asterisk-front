@@ -101,5 +101,7 @@ export interface AsteriskInstanceUpdate {
   sip_port?: number | null
   http_port?: number | null
   ami_port?: number | null
+  rtp_port_start?: number | null
+  rtp_port_end?: number | null
   status?: string | null
 }

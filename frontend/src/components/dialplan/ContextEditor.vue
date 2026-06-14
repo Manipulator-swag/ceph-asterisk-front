@@ -207,7 +207,8 @@ const convertApiToRows = (apiRows: DialplanRowResponse[]): RowItem[] => {
       const parts = val.split(',')
       if (parts.length < 3) continue
       const extension = parts[0]
-      const priority: string = parts[1]
+      const priority = parts[1]
+      if (!extension || !priority) continue
       const rest = parts.slice(2).join(',')
 
       let app = ''

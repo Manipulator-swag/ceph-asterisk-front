@@ -46,7 +46,7 @@
           :key="selectedContext"
           ref="editorRef"
           :context-name="selectedContext"
-          :rows="contextsMap[selectedContext]"
+          :rows="contextsMap[selectedContext]!"
           @update="saveContext"
         />
         <div class="global-actions">
@@ -123,9 +123,11 @@ const loadInstances = async () => {
   }
 }
 
-const handleContextChange = (newContext: string) => {
+const handleContextChange = (newContext: string | number | null) => {
+  if (newContext === null) return
+  const contextName = String(newContext)
   if (!editorRef.value) {
-    selectedContext.value = newContext
+    selectedContext.value = contextName
     return
   }
   // Если есть несохранённые изменения — спрашиваем пользователя
@@ -136,7 +138,7 @@ const handleContextChange = (newContext: string) => {
     if (!confirmed) return
   }
   // Если изменений нет или пользователь подтвердил — переключаем
-  selectedContext.value = newContext
+  selectedContext.value = contextName
 }
 
 const loadDialplan = async () => {
@@ -148,18 +150,19 @@ const loadDialplan = async () => {
     allRows.value = data.rows
     const map: Record<string, DialplanRowResponse[]> = {}
     for (const row of allRows.value) {
-      if (!map[row.category]) map[row.category] = []
-      map[row.category].push(row)
+      const category = row.category
+      if (!map[category]) map[category] = []
+      map[category].push(row)
     }
     for (const ctx in map) {
-      map[ctx].sort((a, b) => a.var_metric - b.var_metric)
+      map[ctx]?.sort((a, b) => a.var_metric - b.var_metric)
     }
     contextsMap.value = map
     // Если выбранный контекст отсутствует – сбросить
     if (selectedContext.value && !contextsMap.value[selectedContext.value]) {
-      selectedContext.value = Object.keys(map)[0] || null
+      selectedContext.value = Object.keys(map)[0] ?? null
     } else if (Object.keys(map).length > 0 && !selectedContext.value) {
-      selectedContext.value = Object.keys(map)[0]
+      selectedContext.value = Object.keys(map)[0] ?? null
     }
   } catch (err: unknown) {
     let msg = 'Ошибка загрузки диалплана'
@@ -188,7 +191,7 @@ const saveContext = async (updatedRows: DialplanRowUpdate[]) => {
       category: row.category,
       var_name: row.var_name,
       var_val: row.var_val,
-      commented: row.commented,
+      commented: row.commented ?? 0,
     }))
     contextsMap.value[selectedContext.value] = newRows
     toast.addToast({ message: `Контекст "${selectedContext.value}" сохранён`, type: 'success' })
@@ -211,6 +214,7 @@ const saveAllChanges = async () => {
   const allUpdatedRows: DialplanRowUpdate[] = []
   for (const ctx in contextsMap.value) {
     const rows = contextsMap.value[ctx]
+    if (!rows) continue
     rows.forEach(row => {
       allUpdatedRows.push({
         cat_metric: row.cat_metric,

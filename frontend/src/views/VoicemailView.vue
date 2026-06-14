@@ -106,7 +106,7 @@
       :show="showBindingModal"
       :instance-id="selectedInstanceId"
       :mailbox="bindingMailbox"
-      :users="sipUsers"
+      :users="sipUsersForBinding"
       :current-binding-user-id="boundUsersMap[bindingMailbox]"
       @close="onBindingClose"
     />
@@ -136,7 +136,7 @@ const toast = useToastStore()
 
 // Состояния
 const instances = ref<VatsInstanceFromAPI[]>([])
-const selectedInstanceId = ref<number | null>(null)
+const selectedInstanceId = ref<number | undefined>(undefined)
 const boxes = ref<VoicemailBox[]>([])
 const sipUsers = ref<SIPUserFromAPI[]>([])
 const boundUsersMap = ref<Record<string, string>>({})
@@ -151,7 +151,13 @@ const recordingsMailbox = ref('')
 const showBindingModal = ref(false)
 const bindingMailbox = ref('')
 
-// Опции
+const sipUsersForBinding = computed(() =>
+  sipUsers.value.map(user => ({
+    id: user.id,
+    name: user.callerid || user.id,
+  })),
+)
+
 const instanceOptions = computed(() => instances.value.map(i => ({ value: i.id, label: i.name })))
 
 // Загрузка списка ВАТС
@@ -253,13 +259,13 @@ const openBindingModal = (box: VoicemailBox) => {
 }
 
 // Обработчик закрытия формы
-const onFormClose = (reload: boolean) => {
+const onFormClose = (reload?: boolean) => {
   showFormModal.value = false
   if (reload) loadBoxes()
 }
 
 // Обработчик закрытия модалки привязки
-const onBindingClose = (reload: boolean) => {
+const onBindingClose = (reload?: boolean) => {
   showBindingModal.value = false
   if (reload) loadBoxes()
 }

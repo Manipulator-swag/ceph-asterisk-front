@@ -244,7 +244,7 @@ const loadCurrentConfig = async () => {
     // Здесь можно попытаться определить текущую версию (если API возвращает заголовок или можно сравнить с последней историей)
     if (historyItems.value.length > 0) {
       // Предположим, что самая свежая версия — текущая
-      currentVersion.value = historyItems.value[0].version
+      currentVersion.value = historyItems.value[0]?.version ?? null
     } else {
       currentVersion.value = null
     }
